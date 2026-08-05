@@ -3,132 +3,272 @@
 <html lang="ko">
 
 <head>
+
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<meta
+name="viewport"
+content="width=device-width, initial-scale=1.0"
+
+>
 
   <title>미지의 숲: 위치 기반 보호소 탐험기</title>
 
-  <!-- Leaflet -->
+  <!-- ==========================================
+       Leaflet
+       ========================================== -->
 
   <link
     rel="stylesheet"
     href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
   >
 
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js">
+  </script>
+
+  <!-- ==========================================
+       CSS
+       ========================================== -->
 
   <style>
 
     html,
     body {
+
       margin: 0;
+
       padding: 0;
+
       width: 100%;
+
       height: 100%;
+
       overflow: hidden;
+
       font-family: sans-serif;
+
     }
+
 
     #map {
+
       width: 100%;
+
       height: 100%;
+
     }
 
+
+    /* ==========================================
+       상단 버튼
+       ========================================== */
+
     .controls {
+
       position: absolute;
+
       top: 15px;
+
       left: 50%;
+
       transform: translateX(-50%);
+
       z-index: 1000;
 
       display: flex;
+
       gap: 10px;
 
       background: rgba(255, 255, 255, 0.95);
+
       padding: 8px 15px;
+
       border-radius: 20px;
 
-      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      box-shadow:
+        0 4px 12px rgba(0, 0, 0, 0.15);
+
     }
 
+
     .btn {
+
       border: none;
+
       background: #2e7d32;
+
       color: white;
 
       padding: 8px 16px;
+
       border-radius: 15px;
 
       font-weight: bold;
+
       cursor: pointer;
 
       transition: background 0.2s;
+
     }
+
 
     .btn:hover {
+
       background: #1b5e20;
+
     }
 
+
+    /* ==========================================
+       상태창
+       ========================================== */
+
     #status-box {
+
       position: absolute;
+
       bottom: 10px;
+
       left: 10px;
+
       z-index: 1000;
 
       background: rgba(0, 0, 0, 0.75);
+
       color: #fff;
 
       padding: 10px 15px;
+
       border-radius: 8px;
 
       font-size: 12px;
 
       max-width: 80%;
+
       max-height: 120px;
 
       overflow-y: auto;
+
     }
 
+
+    /* ==========================================
+       보호소 노란색 마커
+       ========================================== */
+
     .shelter-marker {
+
       width: 28px;
+
       height: 28px;
 
       background: #fbc02d;
 
       border: 3px solid #ffffff;
+
       border-radius: 50%;
 
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+      box-shadow:
+        0 2px 6px rgba(0, 0, 0, 0.35);
 
       position: relative;
+
     }
 
+
     .shelter-marker::after {
+
       content: "";
 
       position: absolute;
 
       width: 8px;
+
       height: 8px;
 
       background: #ffffff;
+
       border-radius: 50%;
 
       left: 50%;
+
       top: 50%;
 
-      transform: translate(-50%, -50%);
+      transform:
+        translate(-50%, -50%);
+
     }
+
+
+    /* ==========================================
+       보호소 팝업
+       ========================================== */
 
     .shelter-popup {
+
       line-height: 1.6;
-      min-width: 220px;
+
+      min-width: 230px;
+
     }
 
+
     .shelter-popup-title {
-      font-size: 16px;
+
+      font-size: 18px;
+
       font-weight: bold;
-      margin-bottom: 6px;
+
+      margin-bottom: 3px;
+
+    }
+
+
+    .shelter-popup-subtitle {
+
+      font-size: 13px;
+
+      color: #666;
+
+      margin-bottom: 10px;
+
+    }
+
+
+    /* ==========================================
+       진입하기 버튼
+       ========================================== */
+
+    .enter-button {
+
+      width: 100%;
+
+      margin-top: 14px;
+
+      padding: 10px;
+
+      border: none;
+
+      border-radius: 8px;
+
+      background: #2e7d32;
+
+      color: white;
+
+      font-size: 14px;
+
+      font-weight: bold;
+
+      cursor: pointer;
+
+    }
+
+
+    .enter-button:hover {
+
+      background: #1b5e20;
+
     }
 
   </style>
@@ -136,6 +276,10 @@
 </head>
 
 <body>
+
+  <!-- ==========================================
+       상단 버튼
+       ========================================== -->
 
   <div class="controls">
 
@@ -147,6 +291,7 @@
   내 주변 지도
 </button>
 
+
 <button
   class="btn"
   onclick="moveToFullMap()"
@@ -157,13 +302,18 @@
 
   </div>
 
+  <!-- 지도 -->
+
   <div id="map"></div>
+
+  <!-- 상태창 -->
 
   <div id="status-box">
     데이터 로딩 준비 중...
   </div>
 
   <script>
+
 
     // ==================================================
     // Apps Script 웹 앱 주소
@@ -191,12 +341,21 @@
     const KOREA_CENTER = [36.5, 127.8];
 
 
-    // GPS를 얻지 못했을 때 사용할 기본 위치
+    // GPS를 얻지 못했을 때 기본값
 
     let userCoords = {
+
       lat: 37.5665,
+
       lng: 126.9780
+
     };
+
+
+    // GPS가 실제로 확보되었는지 확인
+
+    let gpsAvailable = false;
+
 
 
     // ==================================================
@@ -208,12 +367,18 @@
       const statusBox =
         document.getElementById("status-box");
 
+
       if (statusBox) {
+
         statusBox.innerHTML = message;
+
       }
 
+
       console.log(message);
+
     }
+
 
 
     // ==================================================
@@ -226,16 +391,26 @@
         value === null ||
         value === undefined
       ) {
+
         return "";
+
       }
 
+
       return String(value)
+
         .replace(/&/g, "&amp;")
+
         .replace(/</g, "&lt;")
+
         .replace(/>/g, "&gt;")
+
         .replace(/"/g, "&quot;")
+
         .replace(/'/g, "&#039;");
+
     }
+
 
 
     // ==================================================
@@ -244,14 +419,16 @@
 
     window.onload = function() {
 
+
       // ------------------------------------------
       // Leaflet 지도 생성
       // ------------------------------------------
 
-      map = L.map("map").setView(
-        KOREA_CENTER,
-        7
-      );
+      map =
+        L.map("map").setView(
+          KOREA_CENTER,
+          7
+        );
 
 
       // ------------------------------------------
@@ -261,16 +438,19 @@
       L.tileLayer(
         "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
         {
+
           maxZoom: 19,
 
           attribution:
             "&copy; OpenStreetMap contributors"
+
         }
+
       ).addTo(map);
 
 
       // ------------------------------------------
-      // 보호소 마커 LayerGroup
+      // 보호소 LayerGroup
       // ------------------------------------------
 
       shelterLayer =
@@ -293,11 +473,13 @@
     };
 
 
+
     // ==================================================
     // GPS 추적
     // ==================================================
 
     function startGPSTracking() {
+
 
       if (!("geolocation" in navigator)) {
 
@@ -306,6 +488,7 @@
         );
 
         return;
+
       }
 
 
@@ -313,8 +496,15 @@
 
         function(position) {
 
+
+          // GPS 확보 성공
+
+          gpsAvailable = true;
+
+
           userCoords.lat =
             position.coords.latitude;
+
 
           userCoords.lng =
             position.coords.longitude;
@@ -324,91 +514,135 @@
             position.coords.accuracy;
 
 
-          // 기존 위치 마커 제거
+          // ------------------------------------------
+          // 기존 사용자 위치 삭제
+          // ------------------------------------------
 
           if (userMarker) {
-            map.removeLayer(userMarker);
+
+            map.removeLayer(
+              userMarker
+            );
+
           }
+
 
           if (accuracyCircle) {
-            map.removeLayer(accuracyCircle);
+
+            map.removeLayer(
+              accuracyCircle
+            );
+
           }
 
 
+          // ------------------------------------------
           // GPS 오차 범위
+          // ------------------------------------------
 
-          accuracyCircle = L.circle(
-            [
-              userCoords.lat,
-              userCoords.lng
-            ],
-            {
-              radius: accuracy,
+          accuracyCircle =
+            L.circle(
 
-              color: "#1e88e5",
+              [
+                userCoords.lat,
+                userCoords.lng
+              ],
 
-              fillColor: "#1e88e5",
+              {
 
-              fillOpacity: 0.15,
+                radius: accuracy,
 
-              weight: 1
-            }
-          ).addTo(map);
+                color: "#1e88e5",
+
+                fillColor: "#1e88e5",
+
+                fillOpacity: 0.15,
+
+                weight: 1
+
+              }
+
+            ).addTo(map);
 
 
+          // ------------------------------------------
           // 현재 위치
+          // ------------------------------------------
 
-          userMarker = L.circleMarker(
-            [
-              userCoords.lat,
-              userCoords.lng
-            ],
-            {
-              radius: 8,
+          userMarker =
+            L.circleMarker(
 
-              fillColor: "#1e88e5",
+              [
+                userCoords.lat,
+                userCoords.lng
+              ],
 
-              color: "#ffffff",
+              {
 
-              weight: 3,
+                radius: 8,
 
-              opacity: 1,
+                fillColor: "#1e88e5",
 
-              fillOpacity: 0.9
-            }
-          )
-          .addTo(map)
-          .bindPopup(
-            "<b>나의 위치</b><br>" +
-            "오차범위: 약 " +
-            Math.round(accuracy) +
-            "m"
-          );
+                color: "#ffffff",
+
+                weight: 3,
+
+                opacity: 1,
+
+                fillOpacity: 0.9
+
+              }
+
+            )
+
+            .addTo(map)
+
+            .bindPopup(
+
+              "<b>나의 위치</b><br>" +
+
+              "오차범위: 약 " +
+
+              Math.round(accuracy) +
+
+              "m"
+
+            );
 
         },
 
 
         function(error) {
 
+
+          gpsAvailable = false;
+
+
           logStatus(
+
             "GPS 오류: " +
+
             error.message
+
           );
 
         },
 
 
         {
+
           enableHighAccuracy: true,
 
           timeout: 10000,
 
           maximumAge: 0
+
         }
 
       );
 
     }
+
 
 
     // ==================================================
@@ -417,24 +651,38 @@
 
     function moveToUserLocation() {
 
+
       if (!map) {
+
         return;
+
       }
 
+
       map.flyTo(
+
         [
+
           userCoords.lat,
+
           userCoords.lng
+
         ],
+
         15,
+
         {
+
           animate: true,
 
           duration: 1.5
+
         }
+
       );
 
     }
+
 
 
     // ==================================================
@@ -443,21 +691,32 @@
 
     function moveToFullMap() {
 
+
       if (!map) {
+
         return;
+
       }
 
+
       map.flyTo(
+
         KOREA_CENTER,
+
         7,
+
         {
+
           animate: true,
 
           duration: 1.5
+
         }
+
       );
 
     }
+
 
 
     // ==================================================
@@ -466,6 +725,7 @@
 
     async function fetchShelterData() {
 
+
       logStatus(
         "보호소 데이터를 불러오는 중..."
       );
@@ -473,20 +733,26 @@
 
       try {
 
+
         // ------------------------------------------
         // Apps Script 호출
         // ------------------------------------------
 
         const response =
           await fetch(
+
             GAS_WEB_APP_URL,
+
             {
+
               method: "GET",
 
               redirect: "follow",
 
               cache: "no-store"
+
             }
+
           );
 
 
@@ -497,8 +763,11 @@
         if (!response.ok) {
 
           throw new Error(
+
             "서버 응답 오류: HTTP " +
+
             response.status
+
           );
 
         }
@@ -513,20 +782,30 @@
 
 
         console.log(
+
           "Apps Script 응답:",
+
           resData
+
         );
 
 
         // ------------------------------------------
-        // Apps Script 서버 오류
+        // Apps Script 오류
         // ------------------------------------------
 
-        if (resData.status !== "success") {
+        if (
+          resData.status !==
+          "success"
+        ) {
+
 
           console.error(
+
             "서버 오류:",
+
             resData
+
           );
 
 
@@ -537,15 +816,23 @@
           if (resData.message) {
 
             errorMessage +=
+
               "<br>" +
-              escapeHtml(resData.message);
+
+              escapeHtml(
+                resData.message
+              );
 
           }
 
 
-          logStatus(errorMessage);
+          logStatus(
+            errorMessage
+          );
+
 
           return;
+
         }
 
 
@@ -554,15 +841,25 @@
         // ------------------------------------------
 
         if (
+
           !resData.data ||
-          !Array.isArray(resData.data)
+
+          !Array.isArray(
+            resData.data
+          )
+
         ) {
 
+
           logStatus(
+
             "보호소 데이터가 없습니다."
+
           );
 
+
           return;
+
         }
 
 
@@ -581,24 +878,52 @@
         // ------------------------------------------
 
         resData.data.forEach(
+
           function(shelter) {
+
 
             const lat =
               Number(shelter.lat);
+
 
             const lng =
               Number(shelter.lng);
 
 
-            // 좌표가 없는 경우 제외
+            // 좌표가 없으면 제외
 
             if (
+
               !Number.isFinite(lat) ||
+
               !Number.isFinite(lng)
+
             ) {
 
               return;
+
             }
+
+
+            // --------------------------------------
+            // 숲 번호
+            // --------------------------------------
+
+            count++;
+
+            const forestNumber =
+              count;
+
+
+            // --------------------------------------
+            // 실제 보호소 이름
+            // --------------------------------------
+
+            const realShelterName =
+
+              shelter.name ||
+
+              "이름 없는 보호소";
 
 
             // --------------------------------------
@@ -606,6 +931,7 @@
             // --------------------------------------
 
             const shelterIcon =
+
               L.divIcon({
 
                 className: "",
@@ -613,11 +939,20 @@
                 html:
                   '<div class="shelter-marker"></div>',
 
-                iconSize: [34, 34],
+                iconSize: [
+                  34,
+                  34
+                ],
 
-                iconAnchor: [17, 17],
+                iconAnchor: [
+                  17,
+                  17
+                ],
 
-                popupAnchor: [0, -18]
+                popupAnchor: [
+                  0,
+                  -18
+                ]
 
               });
 
@@ -627,36 +962,96 @@
             // --------------------------------------
 
             const marker =
+
               L.marker(
-                [lat, lng],
+
+                [
+                  lat,
+                  lng
+                ],
+
                 {
-                  icon: shelterIcon
+
+                  icon:
+                    shelterIcon
+
                 }
-              ).addTo(shelterLayer);
+
+              ).addTo(
+                shelterLayer
+              );
 
 
             // --------------------------------------
-            // 팝업 내용
+            // 팝업
             // --------------------------------------
 
             const popupHtml = `
+
               <div class="shelter-popup">
 
-                <div class="shelter-popup-title">
-                  ${escapeHtml(shelter.name)}
+                <div
+                  class="shelter-popup-title"
+                >
+                  숲 ${forestNumber}
                 </div>
+
+
+                <div
+                  class="shelter-popup-subtitle"
+                >
+                  ${escapeHtml(
+                    realShelterName
+                  )}
+                </div>
+
 
                 <div>
+
                   <b>주소</b><br>
-                  ${escapeHtml(shelter.address)}
+
+                  ${escapeHtml(
+                    shelter.address
+                  )}
+
                 </div>
 
-                <div style="margin-top:5px;">
+
+                <div
+                  style="margin-top:8px;"
+                >
+
                   <b>전화번호</b><br>
-                  ${escapeHtml(shelter.tel)}
+
+                  ${escapeHtml(
+                    shelter.tel
+                  )}
+
                 </div>
+
+
+                <button
+                  class="enter-button"
+                  onclick="
+                    checkForestEntry(
+                      ${lat},
+                      ${lng},
+                      ${forestNumber},
+                      '${escapeHtml(
+                        realShelterName
+                      )
+                        .replace(
+                          /'/g,
+                          "\\'"
+                        )}'
+                    )
+                  "
+                >
+                  진입하기
+                </button>
 
               </div>
+
             `;
 
 
@@ -664,10 +1059,8 @@
               popupHtml
             );
 
-
-            count++;
-
           }
+
         );
 
 
@@ -677,31 +1070,47 @@
 
         if (count > 0) {
 
+
           logStatus(
+
             "보호소 " +
+
             count +
+
             "곳을 지도에 표시했습니다."
+
           );
+
 
         } else {
 
+
           logStatus(
+
             "API에서 보호소를 받았지만 " +
+
             "좌표가 있는 보호소가 없습니다."
+
           );
 
 
           console.warn(
+
             "Apps Script logs:",
+
             resData.logs
+
           );
 
         }
 
 
         console.log(
+
           "전체 API 데이터:",
+
           resData
+
         );
 
       }
@@ -709,23 +1118,314 @@
 
       catch (error) {
 
+
         console.error(
+
           "보호소 데이터 오류:",
+
           error
+
         );
 
 
         logStatus(
+
           "보호소 데이터 로딩 오류<br>" +
-          escapeHtml(error.message)
+
+          escapeHtml(
+            error.message
+          )
+
         );
 
       }
 
     }
 
+
+
+    // ==================================================
+    // 진입 가능 여부 확인
+    // ==================================================
+
+    function checkForestEntry(
+
+      shelterLat,
+
+      shelterLng,
+
+      forestNumber,
+
+      shelterName
+
+    ) {
+
+
+      // ------------------------------------------
+      // GPS 확보 여부 확인
+      // ------------------------------------------
+
+      if (!gpsAvailable) {
+
+
+        alert(
+
+          "현재 위치를 확인할 수 없습니다.\n\n" +
+
+          "GPS 권한을 허용하고 " +
+
+          "잠시 기다린 후 다시 시도하십시오."
+
+        );
+
+
+        return;
+
+      }
+
+
+      // ------------------------------------------
+      // 현재 위치
+      // ------------------------------------------
+
+      const userLat =
+        userCoords.lat;
+
+
+      const userLng =
+        userCoords.lng;
+
+
+      // ------------------------------------------
+      // 거리 계산
+      // ------------------------------------------
+
+      const distance =
+        getDistanceInMeters(
+
+          userLat,
+
+          userLng,
+
+          shelterLat,
+
+          shelterLng
+
+        );
+
+
+      console.log(
+
+        "숲 " +
+
+        forestNumber +
+
+        "까지의 거리:",
+
+        distance +
+
+        "m"
+
+      );
+
+
+      // ------------------------------------------
+      // 50m 초과
+      // ------------------------------------------
+
+      if (distance > 50) {
+
+
+        alert(
+
+          "숲 " +
+
+          forestNumber +
+
+          "에 진입할 수 없습니다.\n\n" +
+
+          "현재 거리: " +
+
+          Math.round(distance) +
+
+          "m\n\n" +
+
+          "보호소에서 50m 이내로 " +
+
+          "접근해야 진입할 수 있습니다."
+
+        );
+
+
+        return;
+
+      }
+
+
+      // ------------------------------------------
+      // 50m 이내
+      // ------------------------------------------
+
+      enterForest(
+
+        forestNumber,
+
+        shelterName
+
+      );
+
+    }
+
+
+
+    // ==================================================
+    // 두 GPS 좌표 사이의 거리 계산
+    // 결과: 미터(m)
+    // ==================================================
+
+    function getDistanceInMeters(
+
+      lat1,
+
+      lng1,
+
+      lat2,
+
+      lng2
+
+    ) {
+
+
+      // 지구 반지름
+
+      const R = 6371000;
+
+
+      const lat1Rad =
+        lat1 * Math.PI / 180;
+
+
+      const lat2Rad =
+        lat2 * Math.PI / 180;
+
+
+      const deltaLat =
+
+        (lat2 - lat1) *
+
+        Math.PI / 180;
+
+
+      const deltaLng =
+
+        (lng2 - lng1) *
+
+        Math.PI / 180;
+
+
+      // Haversine 공식
+
+      const a =
+
+        Math.sin(
+          deltaLat / 2
+        ) *
+
+        Math.sin(
+          deltaLat / 2
+        ) +
+
+
+        Math.cos(
+          lat1Rad
+        ) *
+
+        Math.cos(
+          lat2Rad
+        ) *
+
+
+        Math.sin(
+          deltaLng / 2
+        ) *
+
+        Math.sin(
+          deltaLng / 2
+        );
+
+
+      const c =
+
+        2 *
+
+        Math.atan2(
+
+          Math.sqrt(a),
+
+          Math.sqrt(1 - a)
+
+        );
+
+
+      return R * c;
+
+    }
+
+
+
+    // ==================================================
+    // 숲 진입 임시 함수
+    // ==================================================
+
+    function enterForest(
+
+      forestNumber,
+
+      shelterName
+
+    ) {
+
+
+      // 현재는 임시 기능
+
+      alert(
+
+        "숲 " +
+
+        forestNumber +
+
+        "에 진입합니다.\n\n" +
+
+        "보호소: " +
+
+        shelterName
+
+      );
+
+
+      console.log(
+
+        "숲 진입:",
+
+        forestNumber,
+
+        shelterName
+
+      );
+
+
+      // ------------------------------------------
+      // 추후 이곳에 게임 진입 기능 추가
+      // ------------------------------------------
+
+    }
+
+
   </script>
 
 </body>
+
+</html>
+
 
 </html>
