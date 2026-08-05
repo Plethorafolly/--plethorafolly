@@ -111,36 +111,52 @@
     }
 
     // 백엔드 API 연동 및 마커 생성
-    async function fetchShelterData() {
-      logStatus("⏳ 보호소 데이터를 불러오는 중...");
+// 백엔드 API 연동 및 마커 생성
+async function fetchShelterData() {
+  logStatus("⏳ 보호소 데이터를 불러오는 중...");
 
-      try {
-        const response = await fetch(GAS_WEB_APP_URL);
-        const resData = await response.json();
+  // 💛 노란색 마커 아이콘 정의 (Leaflet 기본 마커를 노란색으로 변경)
+  const yellowIcon = L.icon({
+    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-yellow.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+    iconSize: [25, 41],
+    iconAnchor: [12, 41],
+    popupAnchor: [1, -34],
+    shadowSize: [41, 41]
+  });
 
-        if (resData.status === "success" && resData.data) {
-          let count = 0;
-          resData.data.forEach((shelter) => {
-            if (shelter.lat && shelter.lng) {
-              // 마커 생성 및 지도 추가
-              const marker = L.marker([shelter.lat, shelter.lng]).addTo(map);
+  try {
+    // 💡 redirect: "follow" 옵션 추가!
+    const response = await fetch(GAS_WEB_APP_URL, {
+      method: "GET",
+      redirect: "follow"
+    });
 
-              // 🌲 마커 클릭 시 미지의 숲 알림
-              marker.on('click', function() {
-                alert(`🌲 미지의 숲에 접근했습니다!\n\n[보호소명]: ${shelter.name}\n[주소]: ${shelter.address}\n[전화번호]: ${shelter.tel}`);
-              });
-              count++;
-            }
+    const resData = await response.json();
+
+    if (resData.status === "success" && resData.data) {
+      let count = 0;
+      resData.data.forEach((shelter) => {
+        if (shelter.lat && shelter.lng) {
+          // 💛 icon 옵션에 yellowIcon 적용
+          const marker = L.marker([shelter.lat, shelter.lng], { icon: yellowIcon }).addTo(map);
+
+          // 🌲 마커 클릭 시 알림
+          marker.on('click', function() {
+            alert(`🌲 미지의 숲에 접근했습니다!\n\n[보호소명]: ${shelter.name}\n[주소]: ${shelter.address}\n[전화번호]: ${shelter.tel}`);
           });
-
-          logStatus(`✅ 성공! 보호소 ${count}곳의 마커를 지도에 표시했습니다.`);
-        } else {
-          logStatus(`❌ 데이터 로딩 실패: ${resData.message || '데이터 없음'}`);
+          count++;
         }
-      } catch (err) {
-        logStatus(`❌ 백엔드 통신 에러: ${err.message}`);
-      }
+      });
+
+      logStatus(`✅ 성공! 보호소 ${count}곳의 마커를 지도에 표시했습니다.`);
+    } else {
+      logStatus(`❌ 데이터 로딩 실패: ${resData.message || '데이터 없음'}`);
     }
+  } catch (err) {
+    logStatus(`❌ 백엔드 통신 에러: ${err.message}`);
+  }
+}
   </script>
 </body>
 </html>
