@@ -9,45 +9,18 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: sans-serif;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-    /* 지도 위에 떠 있는 컨트롤 버튼바 */
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
+    #map { width: 100%; height: 100%; }
     .controls {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      display: flex;
-      gap: 10px;
-      background: rgba(255, 255, 255, 0.9);
-      padding: 8px 15px;
-      border-radius: 20px;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000;
+      display: flex; gap: 10px; background: rgba(255, 255, 255, 0.9); padding: 8px 15px;
+      border-radius: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.2);
     }
     .btn {
-      border: none;
-      background: #2e7d32;
-      color: white;
-      padding: 8px 16px;
-      border-radius: 15px;
-      font-weight: bold;
-      cursor: pointer;
-      transition: background 0.2s;
+      border: none; background: #2e7d32; color: white; padding: 8px 16px;
+      border-radius: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s;
     }
-    .btn:hover {
-      background: #1b5e20;
-    }
+    .btn:hover { background: #1b5e20; }
   </style>
 </head>
 <body>
@@ -60,78 +33,87 @@
   <div id="map"></div>
 
   <script>
-    // 💡 방금 배포한 Apps Script의 웹 앱 URL을 여기에 넣으세요!
+    // 💡 배포된 Apps Script의 새 웹 앱 URL을 붙여넣으세요.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyF2ulyz9CReQ_4_I144Yn1Z1jp0cRufqt6B6fLpqsSceFv2d1rUsuQY_gpKNUdvBLAVA/exec";
 
     let map;
     let userMarker;
-    let shelterMarkers = [];
-    
-    // 한국 중심 좌표 및 GPS 기본 좌표 (서울 좌표 기본값)
+    let accuracyCircle;
     const KOREA_CENTER = [36.5, 127.8];
     let userCoords = { lat: 37.5665, lng: 126.9780 };
 
     window.onload = function() {
-      // 1. Leaflet 지도 초기화 (전체 지도 보기 상태로 시작)
       map = L.map('map').setView(KOREA_CENTER, 7);
 
-      // OpenStreetMap 베이스 타일 레이어 추가
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      // 2. 사용자의 현재 GPS 위치 추적 시작
-      initGPS();
+      // GPS 추적 시작
+      startGPSTracking();
 
-      // 3. Apps Script 백엔드에서 보호소 데이터 로드
+      // 보호소 데이터 로드
       loadShelterData();
     };
 
-    // 브라우저 기본 GPS 기능 연동
-    function initGPS() {
+    // 고정밀 지속적 GPS 실시간 추적 기능
+    function startGPSTracking() {
       if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(
+        navigator.geolocation.watchPosition(
           (position) => {
             userCoords.lat = position.coords.latitude;
             userCoords.lng = position.coords.longitude;
+            const accuracy = position.coords.accuracy; // 위치 오차 범위(m)
 
-            // 사용자 내 위치 아이콘 표시 (파란색 원형 마커)
+            // 기존 마커 및 오차 범위 원 제거
             if (userMarker) map.removeLayer(userMarker);
-            
+            if (accuracyCircle) map.removeLayer(accuracyCircle);
+
+            // 1. 오차 범위 반경 표시 (연한 푸른색 원)
+            accuracyCircle = L.circle([userCoords.lat, userCoords.lng], {
+              radius: accuracy,
+              color: '#1e88e5',
+              fillColor: '#1e88e5',
+              fillOpacity: 0.15,
+              weight: 1
+            }).addTo(map);
+
+            // 2. 사용자 현재 위치 핀 마커
             userMarker = L.circleMarker([userCoords.lat, userCoords.lng], {
-              radius: 9,
+              radius: 8,
               fillColor: "#1e88e5",
               color: "#ffffff",
               weight: 3,
               opacity: 1,
               fillOpacity: 0.9
-            }).addTo(map).bindPopup("<b>📍 나의 현재 위치</b>");
+            }).addTo(map).bindPopup(`<b>📍 나의 위치</b><br>오차범위: 약 ${Math.round(accuracy)}m`);
           },
           (error) => {
-            console.warn("GPS 위치를 불러올 수 없습니다. 기본 위치를 사용합니다.", error);
+            console.warn("GPS 수신 오류:", error);
           },
-          { enableHighAccuracy: true }
+          {
+            enableHighAccuracy: true, // 고정밀 GPS 사용
+            timeout: 10000,
+            maximumAge: 0
+          }
         );
       } else {
-        alert("이 브라우저는 GPS 위치 정보(Geolocation)를 지원하지 않습니다.");
+        alert("이 브라우저는 GPS를 지원하지 않습니다.");
       }
     }
 
-    // [내 주변 보기] 버튼 작동
     function moveToUserLocation() {
       map.flyTo([userCoords.lat, userCoords.lng], 16, { animate: true, duration: 1.5 });
     }
 
-    // [전체 지도 보기] 버튼 작동
     function moveToFullMap() {
       map.flyTo(KOREA_CENTER, 7, { animate: true, duration: 1.5 });
     }
 
-    // Apps Script 통해 보호소 목록 및 위치 로드
     async function loadShelterData() {
       if (GAS_WEB_APP_URL.includes("여기에_APPS_SCRIPT")) {
-        console.error("Apps Script URL이 설정되지 않았습니다.");
+        console.error("Apps Script URL을 확인해주세요.");
         return;
       }
 
@@ -141,43 +123,18 @@
 
         if (resData.status === "success" && resData.data) {
           resData.data.forEach((shelter) => {
-            // 보호소 주소가 있는 경우 지오코딩 진행
-            const address = shelter.careAddr || shelter.addr;
-            const name = shelter.careNm || shelter.shelterNm || "유기동물 보호소";
+            // 백엔드에서 이미 좌표 변환을 마쳤으므로 바로 마커 찍기
+            const marker = L.marker([shelter.lat, shelter.lng]).addTo(map);
 
-            if (address) {
-              geocodeAddressAndAddMarker(address, name);
-            }
+            // 보호소 마커 클릭 이벤트
+            marker.on('click', function() {
+              alert(`🌲 미지의 숲에 접근했습니다!\n\n[보호소명]: ${shelter.name}\n[주소]: ${shelter.address}\n[전화번호]: ${shelter.tel}`);
+            });
           });
         }
       } catch (err) {
-        console.error("보호소 데이터 로딩 중 에러 발생:", err);
+        console.error("보호소 로딩 에러:", err);
       }
-    }
-
-    // 오픈소스 Nominatim 지오코더를 이용해 주소를 위/경도로 변환 후 지도에 마커 생성
-    function geocodeAddressAndAddMarker(address, shelterName) {
-      const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(address)}`;
-
-      fetch(url)
-        .then(res => res.json())
-        .then(data => {
-          if (data && data.length > 0) {
-            const lat = parseFloat(data[0].lat);
-            const lon = parseFloat(data[0].lon);
-
-            // 보호소 마커 생성
-            const marker = L.marker([lat, lon]).addTo(map);
-
-            // 🌲 보호소 마커 클릭 시 '미지의 숲' 알림 실행
-            marker.on('click', function() {
-              alert(`🌲 미지의 숲에 접근했습니다!\n\n[장소]: ${shelterName}\n[주소]: ${address}\n\n몬스터(보호 동물의 영혼)를 탐색할 수 있습니다!`);
-            });
-
-            shelterMarkers.push(marker);
-          }
-        })
-        .catch(e => console.error("지오코딩 실패:", address, e));
     }
   </script>
 </body>
