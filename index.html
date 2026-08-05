@@ -9,45 +9,25 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <style>
-    body, html {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      font-family: 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
-    }
-    #map {
-      width: 100%;
-      height: 100%;
-    }
-    /* 상단 지도 전환 및 컨트롤 버튼 스티커 */
+    body, html { margin: 0; padding: 0; width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
+    #map { width: 100%; height: 100%; }
+    
     .controls {
-      position: absolute;
-      top: 15px;
-      left: 50%;
-      transform: translateX(-50%);
-      z-index: 1000;
-      display: flex;
-      gap: 10px;
-      background: rgba(255, 255, 255, 0.95);
-      padding: 8px 15px;
-      border-radius: 20px;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+      position: absolute; top: 15px; left: 50%; transform: translateX(-50%); z-index: 1000;
+      display: flex; gap: 10px; background: rgba(255, 255, 255, 0.95); padding: 8px 15px;
+      border-radius: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     .btn {
-      border: none;
-      background: #2e7d32;
-      color: white;
-      padding: 8px 16px;
-      border-radius: 15px;
-      font-weight: bold;
-      font-size: 14px;
-      cursor: pointer;
-      transition: background 0.2s;
+      border: none; background: #2e7d32; color: white; padding: 8px 16px;
+      border-radius: 15px; font-weight: bold; cursor: pointer; transition: background 0.2s;
     }
-    .btn:hover {
-      background: #1b5e20;
+    .btn:hover { background: #1b5e20; }
+
+    /* 화면 하단 로딩 및 디버그 상태 상태창 */
+    #status-box {
+      position: absolute; bottom: 10px; left: 10px; z-index: 1000;
+      background: rgba(0, 0, 0, 0.75); color: #fff; padding: 10px 15px;
+      border-radius: 8px; font-size: 12px; max-width: 80%; max-height: 100px; overflow-y: auto;
     }
   </style>
 </head>
@@ -59,9 +39,10 @@
   </div>
 
   <div id="map"></div>
+  <div id="status-box">데이터 로딩 준비 중...</div>
 
   <script>
-    // 💡 제공해주신 Apps Script 웹앱 URL 적용 완료
+    // 💡 본인의 Apps Script 웹 앱 URL을 정확히 입력하세요.
     const GAS_WEB_APP_URL = "https://script.google.com/macros/s/AKfycbyF2ulyz9CReQ_4_I144Yn1Z1jp0cRufqt6B6fLpqsSceFv2d1rUsuQY_gpKNUdvBLAVA/exec";
 
     let map;
@@ -71,101 +52,93 @@
     let userCoords = { lat: 37.5665, lng: 126.9780 };
 
     window.onload = function() {
-      // 1. Leaflet 지도 생성 (전체 지도 모드로 시작)
+      // 1. Leaflet 지도 초기화
       map = L.map('map').setView(KOREA_CENTER, 7);
 
-      // OpenStreetMap 베이스 레이어 추가
       L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
         maxZoom: 19,
         attribution: '&copy; OpenStreetMap'
       }).addTo(map);
 
-      // 2. 실시간 고정밀 GPS 추적 시작
+      // 2. 실시간 GPS 추적 시작
       startGPSTracking();
 
-      // 3. 백엔드에서 지오코딩 완료된 보호소 마커 불러오기
-      loadShelterData();
+      // 3. 백엔드에서 보호소 데이터 수신 및 마커 표시
+      fetchShelterData();
     };
 
-    // 실시간 고정밀 GPS 추적 함수 (연속 추적 및 오차범위 수신)
+    // 브라우저 상태 표시창 업데이트 함수
+    function logStatus(msg) {
+      const box = document.getElementById('status-box');
+      box.innerHTML = msg;
+      console.log(msg);
+    }
+
+    // GPS 위치 실시간 추적
     function startGPSTracking() {
       if ("geolocation" in navigator) {
         navigator.geolocation.watchPosition(
           (position) => {
             userCoords.lat = position.coords.latitude;
             userCoords.lng = position.coords.longitude;
-            const accuracy = position.coords.accuracy; // 오차 범위(m)
+            const accuracy = position.coords.accuracy;
 
-            // 기존 마커 및 오차 반경 원 삭제
             if (userMarker) map.removeLayer(userMarker);
             if (accuracyCircle) map.removeLayer(accuracyCircle);
 
-            // ① 오차 범위 나타내는 파란색 투명 원
             accuracyCircle = L.circle([userCoords.lat, userCoords.lng], {
-              radius: accuracy,
-              color: '#1e88e5',
-              fillColor: '#1e88e5',
-              fillOpacity: 0.15,
-              weight: 1
+              radius: accuracy, color: '#1e88e5', fillColor: '#1e88e5', fillOpacity: 0.15, weight: 1
             }).addTo(map);
 
-            // ② 내 위치 마커 아이콘
             userMarker = L.circleMarker([userCoords.lat, userCoords.lng], {
-              radius: 8,
-              fillColor: "#1e88e5",
-              color: "#ffffff",
-              weight: 3,
-              opacity: 1,
-              fillOpacity: 0.9
-            }).addTo(map).bindPopup(`<b>📍 나의 현재 위치</b><br>오차범위: 약 ${Math.round(accuracy)}m`);
+              radius: 8, fillColor: "#1e88e5", color: "#ffffff", weight: 3, opacity: 1, fillOpacity: 0.9
+            }).addTo(map).bindPopup(`<b>📍 나의 위치</b><br>오차범위: 약 ${Math.round(accuracy)}m`);
           },
-          (error) => {
-            console.warn("GPS 수신 상태 실패/지연 중:", error);
+          (err) => {
+            logStatus("GPS 오차: " + err.message);
           },
-          {
-            enableHighAccuracy: true, // 고정밀 GPS 강제
-            timeout: 10000,
-            maximumAge: 0
-          }
+          { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
         );
-      } else {
-        alert("사용 중인 브라우저가 GPS(Geolocation) 기능을 지원하지 않습니다.");
       }
     }
 
-    // [내 주변 지도] 버튼 기능
     function moveToUserLocation() {
       map.flyTo([userCoords.lat, userCoords.lng], 16, { animate: true, duration: 1.5 });
     }
 
-    // [전체 지도] 버튼 기능
     function moveToFullMap() {
       map.flyTo(KOREA_CENTER, 7, { animate: true, duration: 1.5 });
     }
 
-    // 백엔드 Apps Script에서 보호소 정보 불러오기
-    async function loadShelterData() {
+    // 백엔드 API 연동 및 마커 생성
+    async function fetchShelterData() {
+      logStatus("⏳ 보호소 데이터를 불러오는 중...");
+
       try {
         const response = await fetch(GAS_WEB_APP_URL);
         const resData = await response.json();
 
         if (resData.status === "success" && resData.data) {
+          let count = 0;
           resData.data.forEach((shelter) => {
-            // Apps Script 백엔드에서 변환한 위/경도 좌표로 마커 등록
             if (shelter.lat && shelter.lng) {
+              // 마커 생성 및 지도 추가
               const marker = L.marker([shelter.lat, shelter.lng]).addTo(map);
 
-              // 🌲 보호소 마커 클릭 이벤트 -> '미지의 숲' 알림
+              // 🌲 마커 클릭 시 미지의 숲 알림
               marker.on('click', function() {
-                alert(`🌲 미지의 숲에 접근했습니다!\n\n[보호소명]: ${shelter.name}\n[주소]: ${shelter.address}\n[전화번호]: ${shelter.tel || '정보 없음'}\n\n몬스터(보호 동물의 영혼)를 탐색할 수 있습니다!`);
+                alert(`🌲 미지의 숲에 접근했습니다!\n\n[보호소명]: ${shelter.name}\n[주소]: ${shelter.address}\n[전화번호]: ${shelter.tel}`);
               });
+              count++;
             }
           });
+
+          logStatus(`✅ 성공! 보호소 ${count}곳의 마커를 지도에 표시했습니다.`);
         } else {
-          console.error("보호소 데이터를 수신하지 못했습니다:", resData);
+          logStatus(`❌ 데이터 로딩 실패: ${resData.message || '데이터 없음'}`);
         }
       } catch (err) {
-        console.error("Apps Script통신 실패:", err);
+        logStatus(`❌ 백엔드 통신 에러: ${err.message}`);
       }
     }
   </script>
