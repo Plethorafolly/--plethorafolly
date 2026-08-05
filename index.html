@@ -1,1 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>미지의 숲: 유기동물 RPG</title>
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.min.js"></script>
+</head>
+<body>
+  <h1>🌲 미지의 숲 2D RPG</h1>
+  <div id="game-container"></div>
 
+  <script>
+    // 1. 앱스 스크립트 웹 앱 URL 입력
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbyF2ulyz9CReQ_4_I144Yn1Z1jp0cRufqt6B6fLpqsSceFv2d1rUsuQY_gpKNUdvBLAVA/exec";
+
+    // 2. 백엔드(Apps Script)에서 유기동물/보호소 데이터 가져오기
+    async function loadShelterData() {
+      try {
+        const response = await fetch(GAS_URL);
+        const data = await response.json();
+        console.log("Apps Script에서 받아온 데이터:", data);
+        
+        // 데이터 로드 완료 후 Phaser 게임 시작
+        initGame(data.shelters);
+      } catch (error) {
+        console.error("데이터 로드 실패:", error);
+      }
+    }
+
+    // 3. Phaser 2D 게임 실행 함수
+    function initGame(shelterData) {
+      const config = {
+        type: Phaser.AUTO,
+        width: 800,
+        height: 600,
+        parent: 'game-container',
+        scene: {
+          preload: preload,
+          create: create
+        }
+      };
+
+      const game = new Phaser.Game(config);
+
+      function preload() {
+        // 게임 에셋(이미지 등) 로드
+      }
+
+      function create() {
+        this.add.text(100, 100, "미지의 숲에 오신 것을 환영합니다!", { fill: '#0f0' });
+        // 받아온 shelterData를 활용해 맵 및 몬스터배치
+      }
+    }
+
+    // 페이지 로드 시 데이터 호출
+    window.onload = loadShelterData;
+  </script>
+</body>
+</html>
