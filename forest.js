@@ -1700,4 +1700,3 @@ function addForestGameStyle() {
 console.log(
   "forest.js 로드 성공"
 );
-
