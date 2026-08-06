@@ -1,7 +1,7 @@
 /* ==================================================
    숲 게임
    ================================================== */
-
+console.log("FOREST TEST 123");
 let forestGame = {
 
   depth: 0,
@@ -2086,5 +2086,5 @@ function addForestGameStyle() {
 
 
 console.log(
-  "forest.js 로드 성공"
+  "forest.js 로드 성공!"
 );
