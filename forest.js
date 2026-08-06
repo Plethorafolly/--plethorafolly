@@ -1,1416 +1,597 @@
-const randomIndex =
-  Math.floor(Math.random() * MONSTER_LIST.length);
+// ==================================================
+// 몬스터 데이터
+// ==================================================
 
-const monster =
-  MONSTER_LIST[randomIndex];
+const MONSTER_COLLECTION_DATA = {
 
-console.log(monster.name);
-console.log(monster.species);
+  racconn: {
+    name: "티거",
+    img: "./2112.png",
+    description: "숲에서 발견되는 몬스터입니다."
+  },
+
+  wolf: {
+    name: "늑대",
+    img: "./2112.png",
+    description: "깊은 숲에서 발견되는 몬스터입니다."
+  },
+
+  fox: {
+    name: "여우",
+    img: "./2112.png",
+    description: "숲속을 빠르게 돌아다니는 몬스터입니다."
+  }
+
+};
+
+
+// ==================================================
+// forest.js에서 사용할 몬스터 배열
+// ==================================================
+
+const MONSTER_LIST =
+  Object.entries(MONSTER_COLLECTION_DATA).map(
+    ([species, monster]) => ({
+      species,
+      ...monster
+    })
+  );
+
+
+// ==================================================
+// 보물상자 보상
+// ==================================================
 
 const CHEST_REWARDS = [
+
   "100 골드",
   "체력 회복 포션",
   "마나 회복 포션",
   "낡은 숲의 열쇠",
   "희귀한 버섯"
+
 ];
 
-let forestGame = {
-  depth: 0,
-  currentRoom: null,
-  roomHistory: [],
-  screen: null,
-  player: null,
-  playerX: 50,
-  playerY: 50,
-  keys: {},
-  animationId: null,
-  forestNumber: null,
-  shelterName: "",
-  nearObject: null,
 
-  treeSpawned: false
-};
+const COLLECTION_STORAGE_KEY =
+  "forestMonsterCollection";
 
-function escapeHtml(text) {
-  if (text === null || text === undefined) {
-    return "";
-  }
 
-  return String(text)
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
-}
+// ==================================================
+// 도감 불러오기
+// ==================================================
 
-function getOppositeDirection(direction) {
-  const opposite = {
-    left: "right",
-    right: "left",
-    up: "down",
-    down: "up"
-  };
+function loadMonsterCollection() {
 
-  return opposite[direction] || null;
-}
+  let savedData = {};
 
-function createForestRoom(parentDirection, isTreeRoom = false) {
+  try {
 
-  const room = {
-
-    parentDirection: parentDirection,
-
-    exits: {
-      left: false,
-      right: false,
-      up: false,
-      down: false
-    },
-
-    connections: {
-      left: null,
-      right: null,
-      up: null,
-      down: null
-    },
-
-    tree: null,
-
-    chest: null,
-
-    specialTreeDirection: null
-  };
-
-  const opposite =
-    getOppositeDirection(parentDirection);
-
-  if (opposite) {
-    room.exits[opposite] = true;
-  }
-
-  const deeperForestProbability = 0.25;
-
-  const possibleDirections = [
-    "left",
-    "right",
-    "up",
-    "down"
-  ];
-
-  const availableDirections = [];
-
-  for (const direction of possibleDirections) {
-
-    if (direction === opposite) {
-      continue;
-    }
-
-    if (Math.random() < deeperForestProbability) {
-
-      room.exits[direction] = true;
-
-      availableDirections.push(direction);
-    }
-  }
-
-  if (availableDirections.length > 0) {
-
-    const randomIndex =
-      Math.floor(
-        Math.random() *
-        availableDirections.length
+    const saved =
+      localStorage.getItem(
+        COLLECTION_STORAGE_KEY
       );
 
-    room.specialTreeDirection =
-      availableDirections[randomIndex];
+    if (saved) {
+      savedData = JSON.parse(saved);
+    }
+
+  } catch (error) {
+
+    console.error(
+      "도감 데이터를 불러오지 못했습니다.",
+      error
+    );
+
   }
 
-  if (isTreeRoom) {
 
-    room.tree = {
-      x: 50,
-      y: 50,
-      visited: false
-    };
-  }
+  const collection = {};
 
-  if (
-    parentDirection !== null &&
-    Math.random() < 0.35
-  ) {
 
-    const corners = [
-      { x: 12, y: 12 },
-      { x: 88, y: 12 },
-      { x: 12, y: 88 },
-      { x: 88, y: 88 }
-    ];
+  Object.keys(
+    MONSTER_COLLECTION_DATA
+  ).forEach(
+    species => {
 
-    const selectedCorner =
-      corners[
-        Math.floor(
-          Math.random() *
-          corners.length
-        )
-      ];
+      collection[species] =
+        savedData[species] === true;
 
-    room.chest = {
-      x: selectedCorner.x,
-      y: selectedCorner.y,
-      opened: false
-    };
-  }
-
-  return room;
-}
-
-function createFirstForestRoom() {
-
-  const firstRoom = {
-
-    parentDirection: null,
-
-    exits: {
-      left: true,
-      right: true,
-      up: true,
-      down: false
-    },
-
-    connections: {
-      left: null,
-      right: null,
-      up: null,
-      down: null
-    },
-
-    tree: null,
-
-    chest: null,
-
-    specialTreeDirection: null
-  };
-
-  const directions = [
-    "left",
-    "right",
-    "up"
-  ];
-
-  firstRoom.specialTreeDirection =
-    directions[
-      Math.floor(
-        Math.random() *
-        directions.length
-      )
-    ];
-
-  return firstRoom;
-}
-
-function enterForest(forestNumber, shelterName) {
-
-  console.log(
-    "숲 탐험 시작:",
-    forestNumber,
-    shelterName
+    }
   );
 
-  if (forestGame.screen) {
-    exitForestGame();
-  }
 
-  forestGame.depth = 0;
-  forestGame.roomHistory = [];
+  return collection;
 
-  forestGame.playerX = 50;
-  forestGame.playerY = 50;
+}
 
-  forestGame.forestNumber = forestNumber;
-  forestGame.shelterName = shelterName;
-  forestGame.nearObject = null;
 
-  forestGame.treeSpawned = false;
+window.monsterCollection =
+  loadMonsterCollection();
 
-  forestGame.currentRoom =
-    createFirstForestRoom();
 
-  const screen =
-    document.createElement("div");
+// ==================================================
+// 몬스터 도감 해금
+// ==================================================
 
-  screen.id =
-    "forest-game-screen";
+window.unlockMonster =
+  function(species) {
 
-  screen.innerHTML = `
+    if (
+      !MONSTER_COLLECTION_DATA[species]
+    ) {
 
-    <div class="forest-game">
+      console.warn(
+        "존재하지 않는 몬스터 species:",
+        species
+      );
 
-      <div class="forest-header">
+      return;
 
-        <div>
+    }
 
-          <strong>
-            숲 ${escapeHtml(forestNumber)}
-          </strong>
 
-          <span>
-            ${escapeHtml(shelterName)}
-          </span>
+    window.monsterCollection[species] =
+      true;
 
-        </div>
 
-        <button
-          type="button"
-          class="forest-exit-button"
-          onclick="exitForestGame()"
-        >
-          지도으로 돌아가기
-        </button>
+    try {
 
-      </div>
+      localStorage.setItem(
+        COLLECTION_STORAGE_KEY,
+        JSON.stringify(
+          window.monsterCollection
+        )
+      );
 
-      <div
-        id="forest-room"
-        class="forest-room"
-      >
+    } catch (error) {
 
-        <div
-          id="forest-up"
-          class="forest-entrance forest-up"
-        ></div>
+      console.error(
+        "도감 데이터를 저장하지 못했습니다.",
+        error
+      );
 
-        <div
-          id="forest-left"
-          class="forest-entrance forest-left"
-        ></div>
+    }
 
-        <div
-          id="forest-right"
-          class="forest-entrance forest-right"
-        ></div>
+  };
 
-        <div
-          id="forest-down"
-          class="forest-entrance forest-down"
-        ></div>
 
-        <div
-          id="forest-tree"
-          class="forest-object forest-tree"
-          onclick="interactTree()"
-          style="display:none;"
-        >
-          🌳
-        </div>
+// ==================================================
+// 도감 열기
+// ==================================================
 
-        <div
-          id="forest-chest"
-          class="forest-object forest-chest"
-          onclick="interactChest()"
-          style="display:none;"
-        >
-          🎁
-        </div>
+window.openCollection =
+  function() {
 
-        <div
-          id="forest-player"
-          class="forest-player"
-        ></div>
+    if (
+      document.getElementById(
+        "collection-screen"
+      )
+    ) {
+      return;
+    }
 
-      </div>
 
-      <div
-        id="forest-message"
-        class="forest-message"
-      >
-        방향키로 이동하십시오.
-      </div>
+    const screen =
+      document.createElement("div");
 
-      <div
-        id="forest-modal"
-        class="forest-modal"
-        style="display:none;"
-        onclick="closeModal()"
-      >
+    screen.id =
+      "collection-screen";
 
-        <div
-          class="forest-modal-content"
-          onclick="event.stopPropagation()"
-        >
 
-          <img
-            id="modal-img"
-            src=""
-            alt="획득 이미지"
-            class="modal-img"
-          />
+    screen.innerHTML = `
 
-          <div
-            id="modal-text"
-            class="modal-text"
-          ></div>
+      <div class="collection-window">
+
+        <div class="collection-header">
+
+          <h2>몬스터 도감</h2>
 
           <button
-            class="modal-close-btn"
-            onclick="closeModal()"
+            type="button"
+            class="collection-close"
+            onclick="closeCollection()"
           >
-            확인
+            ×
           </button>
 
         </div>
 
+        <div
+          id="collection-list"
+          class="collection-list"
+        ></div>
+
       </div>
 
-    </div>
-  `;
+    `;
 
-  document.body.appendChild(screen);
 
-  forestGame.screen = screen;
+    document.body.appendChild(screen);
 
-  forestGame.player =
-    document.getElementById(
-      "forest-player"
-    );
+    addCollectionStyle();
 
-  addForestGameStyle();
+    renderCollection();
 
-  startForestKeyboard();
+  };
 
-  renderForestRoom();
 
-  forestGameLoop();
-}
+// ==================================================
+// 도감 닫기
+// ==================================================
 
-function renderForestRoom() {
+window.closeCollection =
+  function() {
 
-  const room =
-    forestGame.currentRoom;
-
-  if (!room) {
-    return;
-  }
-
-  const forestRoom =
-    document.getElementById(
-      "forest-room"
-    );
-
-  if (forestRoom) {
-
-    forestRoom.classList.toggle(
-      "forest-normal",
-      forestGame.depth === 0
-    );
-
-    forestRoom.classList.toggle(
-      "forest-deep",
-      forestGame.depth > 0
-    );
-  }
-
-  const up =
-    document.getElementById("forest-up");
-
-  const left =
-    document.getElementById("forest-left");
-
-  const right =
-    document.getElementById("forest-right");
-
-  const down =
-    document.getElementById("forest-down");
-
-  if (up) {
-    up.style.display =
-      room.exits.up ? "block" : "none";
-  }
-
-  if (left) {
-    left.style.display =
-      room.exits.left ? "block" : "none";
-  }
-
-  if (right) {
-    right.style.display =
-      room.exits.right ? "block" : "none";
-  }
-
-  if (down) {
-    down.style.display =
-      room.exits.down ? "block" : "none";
-  }
-
-  const treeEl =
-    document.getElementById(
-      "forest-tree"
-    );
-
-  if (treeEl) {
-
-    if (room.tree) {
-
-      treeEl.style.left =
-        room.tree.x + "%";
-
-      treeEl.style.top =
-        room.tree.y + "%";
-
-      treeEl.style.display =
-        "block";
-
-    } else {
-
-      treeEl.style.display =
-        "none";
-    }
-  }
-
-  const chestEl =
-    document.getElementById(
-      "forest-chest"
-    );
-
-  if (chestEl) {
-
-    if (room.chest) {
-
-      chestEl.style.left =
-        room.chest.x + "%";
-
-      chestEl.style.top =
-        room.chest.y + "%";
-
-      chestEl.innerText =
-        room.chest.opened
-          ? "📦"
-          : "🎁";
-
-      chestEl.style.display =
-        "block";
-
-    } else {
-
-      chestEl.style.display =
-        "none";
-    }
-  }
-
-  updatePlayerPosition();
-
-  checkObjectProximity();
-}
-
-function startForestKeyboard() {
-
-  stopForestKeyboard();
-
-  document.addEventListener(
-    "keydown",
-    forestKeyDown
-  );
-
-  document.addEventListener(
-    "keyup",
-    forestKeyUp
-  );
-}
-
-function stopForestKeyboard() {
-
-  document.removeEventListener(
-    "keydown",
-    forestKeyDown
-  );
-
-  document.removeEventListener(
-    "keyup",
-    forestKeyUp
-  );
-
-  forestGame.keys = {};
-}
-
-function forestKeyDown(event) {
-
-  if (!forestGame.screen) {
-    return;
-  }
-
-  const allowedKeys = [
-    "ArrowUp",
-    "ArrowDown",
-    "ArrowLeft",
-    "ArrowRight",
-    "Shift"
-  ];
-
-  if (!allowedKeys.includes(event.key)) {
-    return;
-  }
-
-  event.preventDefault();
-
-  forestGame.keys[event.key] = true;
-
-  if (event.key === "Shift") {
-    checkInteraction();
-  }
-}
-
-function forestKeyUp(event) {
-
-  const allowedKeys = [
-    "ArrowUp",
-    "ArrowDown",
-    "ArrowLeft",
-    "ArrowRight",
-    "Shift"
-  ];
-
-  if (allowedKeys.includes(event.key)) {
-
-    forestGame.keys[event.key] =
-      false;
-  }
-}
-
-function forestGameLoop() {
-
-  if (!forestGame.screen) {
-    return;
-  }
-
-  movePlayer();
-
-  updatePlayerPosition();
-
-  checkObjectProximity();
-
-  forestGame.animationId =
-    requestAnimationFrame(
-      forestGameLoop
-    );
-}
-
-function movePlayer() {
-
-  const speed = 0.45;
-
-  let moved = false;
-
-  if (forestGame.keys["ArrowUp"]) {
-    forestGame.playerY -= speed;
-    moved = true;
-  }
-
-  if (forestGame.keys["ArrowDown"]) {
-    forestGame.playerY += speed;
-    moved = true;
-  }
-
-  if (forestGame.keys["ArrowLeft"]) {
-    forestGame.playerX -= speed;
-    moved = true;
-  }
-
-  if (forestGame.keys["ArrowRight"]) {
-    forestGame.playerX += speed;
-    moved = true;
-  }
-
-  if (moved) {
-    checkForestBoundary();
-  }
-}
-
-function updatePlayerPosition() {
-
-  if (!forestGame.player) {
-    return;
-  }
-
-  forestGame.player.style.left =
-    forestGame.playerX + "%";
-
-  forestGame.player.style.top =
-    forestGame.playerY + "%";
-}
-
-function checkObjectProximity() {
-
-  const room =
-    forestGame.currentRoom;
-
-  const message =
-    document.getElementById(
-      "forest-message"
-    );
-
-  if (!room || !message) {
-    return;
-  }
-
-  const threshold = 8;
-
-  let near = null;
-
-  if (room.tree) {
-
-    const distance =
-      Math.hypot(
-        forestGame.playerX - room.tree.x,
-        forestGame.playerY - room.tree.y
+    const screen =
+      document.getElementById(
+        "collection-screen"
       );
 
-    if (distance < threshold) {
-      near = "tree";
+    if (screen) {
+      screen.remove();
     }
-  }
 
-  if (
-    !near &&
-    room.chest &&
-    !room.chest.opened
-  ) {
+  };
 
-    const distance =
-      Math.hypot(
-        forestGame.playerX - room.chest.x,
-        forestGame.playerY - room.chest.y
+
+// ==================================================
+// 도감 표시
+// ==================================================
+
+window.renderCollection =
+  function() {
+
+    const list =
+      document.getElementById(
+        "collection-list"
       );
 
-    if (distance < threshold) {
-      near = "chest";
-    }
-  }
-
-  forestGame.nearObject = near;
-
-  if (near === "tree") {
-
-    message.innerText =
-      "[Shift 키] 또는 [클릭]하여 나무 조사하기";
-
-    message.classList.add(
-      "highlight"
-    );
-
-  } else if (near === "chest") {
-
-    message.innerText =
-      "[Shift 키] 또는 [클릭]하여 보물상자 열기";
-
-    message.classList.add(
-      "highlight"
-    );
-
-  } else {
-
-    message.innerText =
-      "방향키로 이동하십시오.";
-
-    message.classList.remove(
-      "highlight"
-    );
-  }
-}
-
-function checkInteraction() {
-
-  if (
-    forestGame.nearObject ===
-    "tree"
-  ) {
-
-    interactTree();
-
-  } else if (
-    forestGame.nearObject ===
-    "chest"
-  ) {
-
-    interactChest();
-  }
-}
-
-function interactTree() {
-
-  const room =
-    forestGame.currentRoom;
-
-  if (!room || !room.tree) {
-    return;
-  }
-
-  if (room.tree.visited) {
-    return;
-  }
-
-  room.tree.visited = true;
-
-  const randomIndex =
-    Math.floor(
-      Math.random() *
-      MONSTER_LIST.length
-    );
-
-  const monster =
-    MONSTER_LIST[randomIndex];
-
-  showModal(
-    monster.img,
-    `"${monster.name}"을(를) 획득했다!`
-  );
-}
-
-function interactChest() {
-
-  const room =
-    forestGame.currentRoom;
-
-  if (
-    !room ||
-    !room.chest ||
-    room.chest.opened
-  ) {
-    return;
-  }
-
-  room.chest.opened = true;
-
-  const chestEl =
-    document.getElementById(
-      "forest-chest"
-    );
-
-  if (chestEl) {
-    chestEl.innerText = "📦";
-  }
-
-  const randomIndex =
-    Math.floor(
-      Math.random() *
-      CHEST_REWARDS.length
-    );
-
-  const reward =
-    CHEST_REWARDS[randomIndex];
-
-  showModal(
-    "",
-    `보물상자에서 [${reward}]을(를) 획득했습니다!`
-  );
-}
-
-function showModal(imgUrl, text) {
-
-  const modal =
-    document.getElementById(
-      "forest-modal"
-    );
-
-  const modalImg =
-    document.getElementById(
-      "modal-img"
-    );
-
-  const modalText =
-    document.getElementById(
-      "modal-text"
-    );
-
-  if (
-    !modal ||
-    !modalImg ||
-    !modalText
-  ) {
-    return;
-  }
-
-  if (imgUrl) {
-
-    modalImg.src = imgUrl;
-
-    modalImg.style.display =
-      "block";
-
-  } else {
-
-    modalImg.removeAttribute(
-      "src"
-    );
-
-    modalImg.style.display =
-      "none";
-  }
-
-  modalText.innerText =
-    text;
-
-  modal.style.display =
-    "flex";
-}
-
-function closeModal() {
-
-  const modal =
-    document.getElementById(
-      "forest-modal"
-    );
-
-  if (modal) {
-    modal.style.display =
-      "none";
-  }
-}
-
-function checkForestBoundary() {
-
-  const edge = 5;
-
-  const room =
-    forestGame.currentRoom;
-
-  if (!room) {
-    return;
-  }
-
-  if (forestGame.playerY <= edge) {
-
-    forestGame.playerY = edge;
-
-    if (room.exits.up) {
-      handleDirection("up");
-    }
-  }
-
-  if (
-    forestGame.playerY >=
-    100 - edge
-  ) {
-
-    forestGame.playerY =
-      100 - edge;
-
-    if (room.exits.down) {
-
-      handleDirection("down");
-
-    } else if (
-      forestGame.depth === 0
-    ) {
-
-      exitForestGame();
-
+    if (!list) {
       return;
     }
-  }
 
-  if (forestGame.playerX <= edge) {
 
-    forestGame.playerX = edge;
+    list.innerHTML = "";
 
-    if (room.exits.left) {
-      handleDirection("left");
-    }
-  }
 
-  if (
-    forestGame.playerX >=
-    100 - edge
-  ) {
+    Object.keys(
+      MONSTER_COLLECTION_DATA
+    ).forEach(
+      species => {
 
-    forestGame.playerX =
-      100 - edge;
+        const monster =
+          MONSTER_COLLECTION_DATA[species];
 
-    if (room.exits.right) {
-      handleDirection("right");
-    }
-  }
-}
 
-function handleDirection(direction) {
+        const unlocked =
+          window.monsterCollection[species] === true;
 
-  const room =
-    forestGame.currentRoom;
 
-  if (!room) {
-    return;
-  }
+        const card =
+          document.createElement("div");
 
-  if (
-    room.connections[direction]
-  ) {
 
-    moveToExistingRoom(
-      direction
+        card.className =
+          unlocked
+            ? "collection-card unlocked"
+            : "collection-card locked";
+
+
+        if (unlocked) {
+
+          card.innerHTML = `
+
+            <img
+              src="${monster.img}"
+              alt="${monster.name}"
+              class="collection-monster-image"
+            >
+
+            <div class="collection-monster-name">
+              ${monster.name}
+            </div>
+
+            <div class="collection-monster-species">
+              ${species}
+            </div>
+
+            <div class="collection-monster-description">
+              ${monster.description}
+            </div>
+
+          `;
+
+        } else {
+
+          card.innerHTML = `
+
+            <div class="collection-question">
+              ?
+            </div>
+
+            <div class="collection-monster-name">
+              ???
+            </div>
+
+            <div class="collection-monster-species">
+              미발견
+            </div>
+
+            <div class="collection-monster-description">
+              아직 발견하지 못한 몬스터입니다.
+            </div>
+
+          `;
+
+        }
+
+
+        list.appendChild(card);
+
+      }
     );
 
-    return;
-  }
+  };
 
-  enterDeeperForest(
-    direction
-  );
-}
 
-function enterDeeperForest(direction) {
+// ==================================================
+// 도감 CSS
+// ==================================================
 
-  const currentRoom =
-    forestGame.currentRoom;
-
-  if (!currentRoom) {
-    return;
-  }
-
-  forestGame.keys = {};
-
-  const isSpecialTreeRoom =
-    !forestGame.treeSpawned &&
-    currentRoom.specialTreeDirection ===
-    direction;
-
-  const newRoom =
-    createForestRoom(
-      direction,
-      isSpecialTreeRoom
-    );
-
-  if (isSpecialTreeRoom) {
-    forestGame.treeSpawned = true;
-  }
-
-  currentRoom.connections[direction] =
-    newRoom;
-
-  const opposite =
-    getOppositeDirection(
-      direction
-    );
-
-  if (opposite) {
-
-    newRoom.connections[opposite] =
-      currentRoom;
-  }
-
-  forestGame.roomHistory.push(
-    currentRoom
-  );
-
-  forestGame.depth++;
-
-  forestGame.currentRoom =
-    newRoom;
-
-  if (direction === "up") {
-
-    forestGame.playerX = 50;
-    forestGame.playerY = 90;
-
-  } else if (
-    direction === "down"
-  ) {
-
-    forestGame.playerX = 50;
-    forestGame.playerY = 10;
-
-  } else if (
-    direction === "left"
-  ) {
-
-    forestGame.playerX = 90;
-    forestGame.playerY = 50;
-
-  } else if (
-    direction === "right"
-  ) {
-
-    forestGame.playerX = 10;
-    forestGame.playerY = 50;
-  }
-
-  renderForestRoom();
-}
-
-function moveToExistingRoom(direction) {
-
-  const currentRoom =
-    forestGame.currentRoom;
-
-  if (!currentRoom) {
-    return;
-  }
-
-  const targetRoom =
-    currentRoom.connections[
-      direction
-    ];
-
-  if (!targetRoom) {
-    return;
-  }
-
-  forestGame.keys = {};
-
-  if (
-    targetRoom.parentDirection ===
-    direction
-  ) {
-
-    forestGame.roomHistory.push(
-      currentRoom
-    );
-
-    forestGame.depth++;
-
-  } else {
-
-    if (
-      forestGame.roomHistory.length > 0
-    ) {
-
-      forestGame.roomHistory.pop();
-    }
-
-    forestGame.depth--;
-
-    if (forestGame.depth < 0) {
-      forestGame.depth = 0;
-    }
-  }
-
-  forestGame.currentRoom =
-    targetRoom;
-
-  if (direction === "up") {
-
-    forestGame.playerX = 50;
-    forestGame.playerY = 90;
-
-  } else if (
-    direction === "down"
-  ) {
-
-    forestGame.playerX = 50;
-    forestGame.playerY = 10;
-
-  } else if (
-    direction === "left"
-  ) {
-
-    forestGame.playerX = 90;
-    forestGame.playerY = 50;
-
-  } else if (
-    direction === "right"
-  ) {
-
-    forestGame.playerX = 10;
-    forestGame.playerY = 50;
-  }
-
-  renderForestRoom();
-}
-
-function exitForestGame() {
-
-  console.log(
-    "숲에서 나갑니다."
-  );
-
-  stopForestKeyboard();
-
-  if (forestGame.animationId) {
-
-    cancelAnimationFrame(
-      forestGame.animationId
-    );
-
-    forestGame.animationId =
-      null;
-  }
-
-  if (forestGame.screen) {
-
-    forestGame.screen.remove();
-
-    forestGame.screen =
-      null;
-  }
-
-  forestGame.player = null;
-  forestGame.currentRoom = null;
-  forestGame.roomHistory = [];
-  forestGame.depth = 0;
-  forestGame.playerX = 50;
-  forestGame.playerY = 50;
-  forestGame.keys = {};
-  forestGame.forestNumber = null;
-  forestGame.shelterName = "";
-  forestGame.nearObject = null;
-  forestGame.treeSpawned = false;
-}
-
-function addForestGameStyle() {
+function addCollectionStyle() {
 
   if (
     document.getElementById(
-      "forest-game-style"
+      "collection-style"
     )
   ) {
     return;
   }
 
+
   const style =
-    document.createElement(
-      "style"
-    );
+    document.createElement("style");
+
 
   style.id =
-    "forest-game-style";
+    "collection-style";
+
 
   style.innerHTML = `
 
-    #forest-game-screen {
+    #collection-screen {
+
       position: fixed;
       inset: 0;
-      z-index: 9999;
-      width: 100vw;
-      height: 100vh;
-      color: white;
-      font-family: sans-serif;
-    }
+      z-index: 20000;
 
-    .forest-game {
-      position: relative;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-    }
-
-    .forest-room {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: 55px;
-      bottom: 45px;
-      overflow: hidden;
-      background-size: cover;
-      background-position: center;
-      background-repeat: no-repeat;
-    }
-
-    .forest-room.forest-normal {
-      background-image: url("./forest-normal.png");
-    }
-
-    .forest-room.forest-deep {
-      background-image: url("./forest-deep.png");
-    }
-
-    .forest-header {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      box-sizing: border-box;
-      padding: 16px 20px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      z-index: 10;
-      background: rgba(0, 0, 0, 0.35);
-    }
-
-    .forest-header strong {
-      display: block;
-      font-size: 20px;
-    }
-
-    .forest-header span {
-      display: block;
-      margin-top: 3px;
-      font-size: 12px;
-      color: #c9d0c6;
-    }
-
-    .forest-exit-button {
-      border: none;
-      border-radius: 8px;
-      padding: 8px 13px;
-      background: rgba(255, 255, 255, 0.15);
-      color: white;
-      cursor: pointer;
-      font-size: 13px;
-    }
-
-    .forest-exit-button:hover {
-      background: rgba(255, 255, 255, 0.25);
-    }
-
-    .forest-entrance {
-      position: absolute;
-      background: rgba(10, 15, 10, 0.55);
-      box-shadow:
-        inset 0 0 30px rgba(0, 0, 0, 0.85),
-        0 0 25px rgba(0, 0, 0, 0.3);
-      pointer-events: none;
-      z-index: 2;
-    }
-
-    .forest-up {
-      left: 50%;
-      top: 2%;
-      width: 160px;
-      height: 80px;
-      transform: translateX(-50%);
-      border-radius: 80px 80px 0 0;
-    }
-
-    .forest-left {
-      left: 2%;
-      top: 50%;
-      width: 80px;
-      height: 160px;
-      transform: translateY(-50%);
-      border-radius: 0 80px 80px 0;
-    }
-
-    .forest-right {
-      right: 2%;
-      top: 50%;
-      width: 80px;
-      height: 160px;
-      transform: translateY(-50%);
-      border-radius: 80px 0 0 80px;
-    }
-
-    .forest-down {
-      left: 50%;
-      bottom: 2%;
-      width: 160px;
-      height: 80px;
-      transform: translateX(-50%);
-      border-radius: 0 0 80px 80px;
-    }
-
-    .forest-object {
-      position: absolute;
-      font-size: 40px;
-      transform: translate(-50%, -50%);
-      cursor: pointer;
-      z-index: 4;
-      user-select: none;
-      transition: transform 0.2s;
-    }
-
-    .forest-object:hover {
-      transform:
-        translate(-50%, -50%)
-        scale(1.2);
-    }
-
-    .forest-player {
-      position: absolute;
-      width: 30px;
-      height: 30px;
-      transform: translate(-50%, -50%);
-      border-radius: 50%;
-      background: #ffffff;
-      border: 3px solid #111111;
-      box-sizing: border-box;
-      z-index: 5;
-      box-shadow:
-        0 0 12px
-        rgba(255, 255, 255, 0.5);
-    }
-
-    .forest-message {
-      position: absolute;
-      left: 50%;
-      bottom: 12px;
-      transform: translateX(-50%);
-      z-index: 10;
-      padding: 6px 12px;
-      border-radius: 8px;
-      background: rgba(0, 0, 0, 0.45);
-      color: #e5e5e5;
-      font-size: 12px;
-      pointer-events: none;
-      white-space: nowrap;
-      transition: all 0.3s;
-    }
-
-    .forest-message.highlight {
-      background:
-        rgba(255, 193, 7, 0.85);
-      color: #111;
-      font-weight: bold;
-    }
-
-    .forest-modal {
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.7);
-      z-index: 100;
       display: flex;
       justify-content: center;
       align-items: center;
+
+      background: rgba(0, 0, 0, 0.75);
+
+      font-family: sans-serif;
+      color: white;
+
     }
 
-    .forest-modal-content {
-      text-align: center;
+
+    .collection-window {
+
+      position: relative;
+
+      width: min(900px, 90vw);
+      max-height: 85vh;
+
+      overflow: hidden;
+
+      box-sizing: border-box;
+
+      padding: 24px;
+
+      border-radius: 16px;
+
+      background: #202b1d;
+
+      border: 2px solid #81c784;
+
+      box-shadow:
+        0 0 30px rgba(0, 0, 0, 0.7);
+
+    }
+
+
+    .collection-header {
+
       display: flex;
-      flex-direction: column;
       align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 20px;
+
     }
 
-    .modal-img {
-      width: 260px;
-      height: 260px;
-      object-fit: contain;
-      display: block;
-      margin-bottom: 8px;
+
+    .collection-header h2 {
+
+      margin: 0;
+      font-size: 24px;
+
+    }
+
+
+    .collection-close {
+
+      width: 36px;
+      height: 36px;
+
       border: none;
-      border-radius: 0;
-      background: transparent;
-      box-shadow: none;
-    }
+      border-radius: 50%;
 
-    .modal-text {
-      display: inline-block;
-      padding: 10px 18px;
-      border-radius: 8px;
-      background: rgba(20, 30, 20, 0.9);
-      font-size: 15px;
-      font-weight: bold;
-      color: #fff;
-      margin-bottom: 12px;
-    }
+      background: rgba(255, 255, 255, 0.12);
 
-    .modal-close-btn {
-      background: #81c784;
-      color: #111;
-      border: none;
-      padding: 8px 18px;
-      border-radius: 6px;
-      font-weight: bold;
+      color: white;
+
+      font-size: 25px;
+      line-height: 1;
+
       cursor: pointer;
+
     }
 
-    .modal-close-btn:hover {
-      background: #a5d6a7;
+
+    .collection-close:hover {
+
+      background:
+        rgba(255, 255, 255, 0.25);
+
+    }
+
+
+    .collection-list {
+
+      display: grid;
+
+      grid-template-columns:
+        repeat(
+          auto-fill,
+          minmax(180px, 1fr)
+        );
+
+      gap: 16px;
+
+      max-height: 65vh;
+
+      overflow-y: auto;
+
+      padding: 4px;
+
+    }
+
+
+    .collection-card {
+
+      min-height: 250px;
+
+      padding: 16px;
+
+      box-sizing: border-box;
+
+      border-radius: 12px;
+
+      text-align: center;
+
+      background:
+        rgba(255, 255, 255, 0.08);
+
+      border:
+        1px solid
+        rgba(255, 255, 255, 0.12);
+
+    }
+
+
+    .collection-card.unlocked {
+
+      background:
+        rgba(129, 199, 132, 0.12);
+
+      border:
+        1px solid
+        rgba(129, 199, 132, 0.5);
+
+    }
+
+
+    .collection-card.locked {
+
+      opacity: 0.7;
+
+    }
+
+
+    .collection-monster-image {
+
+      display: block;
+
+      width: 140px;
+      height: 140px;
+
+      margin: 0 auto 10px auto;
+
+      object-fit: contain;
+
+      border: none;
+
+      background: transparent;
+
+    }
+
+
+    .collection-question {
+
+      display: flex;
+
+      justify-content: center;
+      align-items: center;
+
+      width: 140px;
+      height: 140px;
+
+      margin: 0 auto 10px auto;
+
+      font-size: 80px;
+      font-weight: bold;
+
+      color: #777;
+
+      background:
+        rgba(0, 0, 0, 0.2);
+
+      border-radius: 12px;
+
+    }
+
+
+    .collection-monster-name {
+
+      font-size: 18px;
+      font-weight: bold;
+
+      margin-bottom: 5px;
+
+    }
+
+
+    .collection-monster-species {
+
+      font-size: 11px;
+
+      color: #aeb8aa;
+
+      margin-bottom: 10px;
+
+    }
+
+
+    .collection-monster-description {
+
+      font-size: 13px;
+
+      line-height: 1.5;
+
+      color: #d7ddd5;
+
     }
 
   `;
 
+
   document.head.appendChild(style);
+
 }
 
-console.log(
-  "forest.js 로드 성공"
-);
+
+console.log("collection.js 로드 성공");
