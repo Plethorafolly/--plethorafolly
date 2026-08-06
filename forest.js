@@ -5,28 +5,26 @@
 
 
 /* ==================================================
-   이미지 파일 설정
-================================================== */
-
-const FOREST_NORMAL_IMAGE = "./forest-normal.png";
-const FOREST_DEEP_IMAGE = "./forest-deep.png";
-const PLAYER_IMAGE = "./2112.png";
-
-
-/* ==================================================
    몬스터 데이터
+   나무를 조사했을 때 이 목록에서 하나가 무작위로 선택됩니다.
 ================================================== */
 
 const MONSTER_LIST = [
-  { name: "티거", img: PLAYER_IMAGE },
-  { name: "티거", img: PLAYER_IMAGE },
-  { name: "티거", img: PLAYER_IMAGE },
-  { name: "티거", img: PLAYER_IMAGE }
+  {
+    name: "티거",
+    img: "./2112.png"
+  }
+
+  // 몬스터를 추가하려면 아래처럼 추가하십시오.
+  // {
+  //   name: "몬스터 이름",
+  //   img: "./monster2.png"
+  // }
 ];
 
 
 /* ==================================================
-   보물상자 보상
+   보물상자 보상 목록
 ================================================== */
 
 const CHEST_REWARDS = [
@@ -43,37 +41,34 @@ const CHEST_REWARDS = [
 ================================================== */
 
 let forestGame = {
-
-  // 현재 깊이
   depth: 0,
 
   // 현재 방
   currentRoom: null,
 
-  // 지나온 방
+  // 이전 방을 저장하는 스택
   roomHistory: [],
 
   // 게임 화면
   screen: null,
 
-  // 플레이어 DOM
+  // 플레이어
   player: null,
 
-  // 플레이어 위치
   playerX: 50,
   playerY: 50,
 
   // 키 입력
   keys: {},
 
-  // 게임 루프
+  // 애니메이션
   animationId: null,
 
   // 숲 정보
   forestNumber: null,
   shelterName: "",
 
-  // 현재 접근한 오브젝트
+  // 현재 가까이 있는 오브젝트
   nearObject: null
 };
 
@@ -83,7 +78,6 @@ let forestGame = {
 ================================================== */
 
 function escapeHtml(text) {
-
   if (text === null || text === undefined) {
     return "";
   }
@@ -102,15 +96,14 @@ function escapeHtml(text) {
 ================================================== */
 
 function getOppositeDirection(direction) {
-
-  const oppositeMap = {
+  const opposite = {
     left: "right",
     right: "left",
     up: "down",
     down: "up"
   };
 
-  return oppositeMap[direction] || null;
+  return opposite[direction] || null;
 }
 
 
@@ -118,12 +111,13 @@ function getOppositeDirection(direction) {
    숲 방 생성
 ==================================================
 
-   중요:
-   이 함수는 방을 "처음 만들 때만" 실행됩니다.
+   중요한 점:
 
-   이후 같은 방을 다시 방문하면
-   기존 방을 그대로 사용합니다.
+   각 방은 exits만 저장하는 것이 아니라
+   connections에 실제 연결된 방을 저장합니다.
 
+   따라서 한 번 생성된 숲은 다시 방문해도
+   새로운 숲으로 바뀌지 않습니다.
 ================================================== */
 
 function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
@@ -133,7 +127,7 @@ function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
     // 이 방으로 들어온 방향
     parentDirection: parentDirection,
 
-    // 출구
+    // 출구 존재 여부
     exits: {
       left: false,
       right: false,
@@ -141,28 +135,28 @@ function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
       down: false
     },
 
-    // 이 방에서 연결된 다른 방
-    children: {
+    // 실제 연결된 방
+    connections: {
       left: null,
       right: null,
       up: null,
       down: null
     },
 
-    // 나무
+    // 중앙 나무
     tree: null,
 
     // 보물상자
     chest: null,
 
-    // 특수 나무가 있는 방향
+    // 이 방에서 새로 생성될 숲의 방향
     specialTreeDirection: null
   };
 
 
-  /* ------------------------------------------------
-     부모 방으로 돌아가는 출구
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     이전 방으로 돌아가는 길
+  -------------------------------------------------- */
 
   const opposite = getOppositeDirection(parentDirection);
 
@@ -171,9 +165,11 @@ function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
   }
 
 
-  /* ------------------------------------------------
-     더 깊은 숲 출구 생성
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     새로운 깊은 숲으로 갈 수 있는 방향 생성
+     
+     부모 방향과 반대되는 방향은 제외합니다.
+  -------------------------------------------------- */
 
   const deeperForestProbability = 0.25;
 
@@ -184,51 +180,48 @@ function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
     "down"
   ];
 
+  const availableDirections = [];
+
 
   for (const direction of possibleDirections) {
 
-    // 부모 방으로 돌아가는 방향은 제외
+    // 현재 들어온 방향의 반대 방향은
+    // 이미 이전 숲으로 돌아가는 길이므로 제외합니다.
     if (direction === opposite) {
       continue;
     }
 
     if (Math.random() < deeperForestProbability) {
+
       room.exits[direction] = true;
+
+      availableDirections.push(direction);
     }
   }
 
 
-  /* ------------------------------------------------
-     최소한 하나의 새로운 방향은 존재하도록 처리
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     새로운 숲 중 한 곳을 나무 방으로 지정
+     
+     단, 실제 나무는 다음 방에 들어갈 때 생성됩니다.
+  -------------------------------------------------- */
 
-  const newDirections = possibleDirections.filter(function(direction) {
-
-    return (
-      direction !== opposite &&
-      room.exits[direction] === true
-    );
-
-  });
-
-
-  /* ------------------------------------------------
-     특수 나무 방 방향
-  ------------------------------------------------ */
-
-  if (newDirections.length > 0) {
+  if (availableDirections.length > 0) {
 
     const randomIndex =
-      Math.floor(Math.random() * newDirections.length);
+      Math.floor(Math.random() * availableDirections.length);
 
     room.specialTreeDirection =
-      newDirections[randomIndex];
+      availableDirections[randomIndex];
   }
 
 
-  /* ------------------------------------------------
-     특수 나무
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     특수 나무 방
+     
+     이 방 자체가 나무 방이라면
+     화면 중앙에 나무를 하나 확정적으로 생성합니다.
+  -------------------------------------------------- */
 
   if (isSpecialTreeRoom) {
 
@@ -240,31 +233,41 @@ function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
   }
 
 
-  /* ------------------------------------------------
+  /* --------------------------------------------------
      보물상자
-  ------------------------------------------------ */
+     
+     일반 숲(depth 0)에는 생성하지 않습니다.
 
-  if (Math.random() < 0.35) {
+     깊은 숲(depth 1 이상)에 해당하는 방에서만
+     확률적으로 생성됩니다.
+     
+     현재 방의 깊이는 enterDeeperForest()에서
+     depth를 증가시키기 전에 생성되므로
+     여기서는 depth와 관계없이,
+     깊은 숲으로 진입하는 방에서 호출될 때만
+     보물상자를 생성하도록 합니다.
+  -------------------------------------------------- */
+
+  if (parentDirection !== null && Math.random() < 0.35) {
 
     const corners = [
 
-      { x: 15, y: 15 },
-      { x: 85, y: 15 },
-      { x: 15, y: 85 },
-      { x: 85, y: 85 }
+      { x: 12, y: 12 },
+      { x: 88, y: 12 },
+      { x: 12, y: 88 },
+      { x: 88, y: 88 }
 
     ];
 
-    const chosenCorner =
+    const selectedCorner =
       corners[Math.floor(Math.random() * corners.length)];
 
     room.chest = {
 
-      x: chosenCorner.x,
-      y: chosenCorner.y,
+      x: selectedCorner.x,
+      y: selectedCorner.y,
 
       opened: false
-
     };
   }
 
@@ -274,12 +277,12 @@ function createForestRoom(parentDirection, isSpecialTreeRoom = false) {
 
 
 /* ==================================================
-   첫 번째 숲 방 생성
+   최초 숲 방 생성
 ================================================== */
 
 function createFirstForestRoom() {
 
-  const room = {
+  const firstRoom = {
 
     parentDirection: null,
 
@@ -290,7 +293,7 @@ function createFirstForestRoom() {
       down: false
     },
 
-    children: {
+    connections: {
       left: null,
       right: null,
       up: null,
@@ -305,9 +308,10 @@ function createFirstForestRoom() {
   };
 
 
-  /* ------------------------------------------------
-     첫 숲의 세 방향 중 하나를 특수 나무 방으로 지정
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     최초 숲의 세 방향 중 한 곳은
+     반드시 나무가 있는 깊은 숲으로 연결됩니다.
+  -------------------------------------------------- */
 
   const directions = [
     "left",
@@ -318,11 +322,11 @@ function createFirstForestRoom() {
   const randomIndex =
     Math.floor(Math.random() * directions.length);
 
-  room.specialTreeDirection =
+  firstRoom.specialTreeDirection =
     directions[randomIndex];
 
 
-  return room;
+  return firstRoom;
 }
 
 
@@ -339,18 +343,18 @@ function enterForest(forestNumber, shelterName) {
   );
 
 
-  /* ------------------------------------------------
-     기존 숲이 있다면 종료
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     이미 숲이 열려 있다면 먼저 종료
+  -------------------------------------------------- */
 
   if (forestGame.screen) {
     exitForestGame();
   }
 
 
-  /* ------------------------------------------------
-     상태 초기화
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     게임 상태 초기화
+  -------------------------------------------------- */
 
   forestGame.depth = 0;
 
@@ -366,22 +370,23 @@ function enterForest(forestNumber, shelterName) {
   forestGame.nearObject = null;
 
 
-  /* ------------------------------------------------
-     첫 번째 방
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     최초 숲 생성
+  -------------------------------------------------- */
 
   forestGame.currentRoom =
     createFirstForestRoom();
 
 
-  /* ------------------------------------------------
+  /* --------------------------------------------------
      게임 화면 생성
-  ------------------------------------------------ */
+  -------------------------------------------------- */
 
   const screen =
     document.createElement("div");
 
-  screen.id = "forest-game-screen";
+  screen.id =
+    "forest-game-screen";
 
 
   screen.innerHTML = `
@@ -414,7 +419,10 @@ function enterForest(forestNumber, shelterName) {
       </div>
 
 
-      <div id="forest-room" class="forest-room">
+      <div
+        id="forest-room"
+        class="forest-room"
+      >
 
         <div
           id="forest-up"
@@ -437,6 +445,8 @@ function enterForest(forestNumber, shelterName) {
         ></div>
 
 
+        <!-- 나무 -->
+
         <div
           id="forest-tree"
           class="forest-object forest-tree"
@@ -446,6 +456,8 @@ function enterForest(forestNumber, shelterName) {
           🌳
         </div>
 
+
+        <!-- 보물상자 -->
 
         <div
           id="forest-chest"
@@ -457,15 +469,17 @@ function enterForest(forestNumber, shelterName) {
         </div>
 
 
-        <img
+        <!-- 플레이어 -->
+
+        <div
           id="forest-player"
           class="forest-player"
-          src="${PLAYER_IMAGE}"
-          alt="플레이어"
-        />
+        ></div>
 
       </div>
 
+
+      <!-- 안내 문구 -->
 
       <div
         id="forest-message"
@@ -474,6 +488,8 @@ function enterForest(forestNumber, shelterName) {
         방향키로 이동하십시오.
       </div>
 
+
+      <!-- 획득 팝업 -->
 
       <div
         id="forest-modal"
@@ -490,7 +506,7 @@ function enterForest(forestNumber, shelterName) {
           <img
             id="modal-img"
             src=""
-            alt="보상 이미지"
+            alt="획득 이미지"
             class="modal-img"
           />
 
@@ -523,10 +539,6 @@ function enterForest(forestNumber, shelterName) {
     document.getElementById("forest-player");
 
 
-  /* ------------------------------------------------
-     CSS 및 게임 시작
-  ------------------------------------------------ */
-
   addForestGameStyle();
 
   startForestKeyboard();
@@ -543,48 +555,20 @@ function enterForest(forestNumber, shelterName) {
 
 function renderForestRoom() {
 
-  const room = forestGame.currentRoom;
+  const room =
+    forestGame.currentRoom;
 
   if (!room) {
     return;
   }
 
 
-  /* ------------------------------------------------
-     숲 배경 변경
-
-     depth 0 = 일반 숲
-     depth 1 이상 = 깊은 숲
-  ------------------------------------------------ */
-
-  const forestRoom =
-    document.getElementById("forest-room");
-
-  if (forestRoom) {
-
-    if (forestGame.depth === 0) {
-
-      forestRoom.style.backgroundImage =
-        `url("${FOREST_NORMAL_IMAGE}")`;
-
-    } else {
-
-      forestRoom.style.backgroundImage =
-        `url("${FOREST_DEEP_IMAGE}")`;
-
-    }
-  }
-
-
-  /* ------------------------------------------------
-     출구 표시
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     출구
+  -------------------------------------------------- */
 
   const up =
     document.getElementById("forest-up");
-
-  const down =
-    document.getElementById("forest-down");
 
   const left =
     document.getElementById("forest-left");
@@ -592,15 +576,13 @@ function renderForestRoom() {
   const right =
     document.getElementById("forest-right");
 
+  const down =
+    document.getElementById("forest-down");
+
 
   if (up) {
     up.style.display =
       room.exits.up ? "block" : "none";
-  }
-
-  if (down) {
-    down.style.display =
-      room.exits.down ? "block" : "none";
   }
 
   if (left) {
@@ -613,14 +595,18 @@ function renderForestRoom() {
       room.exits.right ? "block" : "none";
   }
 
+  if (down) {
+    down.style.display =
+      room.exits.down ? "block" : "none";
+  }
 
-  /* ------------------------------------------------
+
+  /* --------------------------------------------------
      나무
-  ------------------------------------------------ */
+  -------------------------------------------------- */
 
   const treeEl =
     document.getElementById("forest-tree");
-
 
   if (treeEl) {
 
@@ -643,13 +629,12 @@ function renderForestRoom() {
   }
 
 
-  /* ------------------------------------------------
+  /* --------------------------------------------------
      보물상자
-  ------------------------------------------------ */
+  -------------------------------------------------- */
 
   const chestEl =
     document.getElementById("forest-chest");
-
 
   if (chestEl) {
 
@@ -661,10 +646,12 @@ function renderForestRoom() {
       chestEl.style.top =
         room.chest.y + "%";
 
+
       chestEl.innerText =
         room.chest.opened
           ? "📦"
           : "🎁";
+
 
       chestEl.style.display =
         "block";
@@ -678,11 +665,13 @@ function renderForestRoom() {
 
 
   updatePlayerPosition();
+
+  checkObjectProximity();
 }
 
 
 /* ==================================================
-   키보드 입력 시작
+   키보드 시작
 ================================================== */
 
 function startForestKeyboard() {
@@ -702,7 +691,7 @@ function startForestKeyboard() {
 
 
 /* ==================================================
-   키보드 입력 종료
+   키보드 종료
 ================================================== */
 
 function stopForestKeyboard() {
@@ -722,7 +711,7 @@ function stopForestKeyboard() {
 
 
 /* ==================================================
-   키 눌림
+   키 다운
 ================================================== */
 
 function forestKeyDown(event) {
@@ -733,53 +722,53 @@ function forestKeyDown(event) {
 
 
   const allowedKeys = [
-
     "ArrowUp",
     "ArrowDown",
     "ArrowLeft",
     "ArrowRight",
     "Shift"
-
   ];
 
 
-  if (allowedKeys.includes(event.key)) {
-
-    event.preventDefault();
-
-    forestGame.keys[event.key] = true;
+  if (!allowedKeys.includes(event.key)) {
+    return;
+  }
 
 
-    if (event.key === "Shift") {
+  event.preventDefault();
 
-      checkInteraction();
+  forestGame.keys[event.key] = true;
 
-    }
+
+  /* --------------------------------------------------
+     Shift를 누르면 오브젝트 조사
+  -------------------------------------------------- */
+
+  if (event.key === "Shift") {
+    checkInteraction();
   }
 }
 
 
 /* ==================================================
-   키 떼기
+   키 업
 ================================================== */
 
 function forestKeyUp(event) {
 
   const allowedKeys = [
-
     "ArrowUp",
     "ArrowDown",
     "ArrowLeft",
     "ArrowRight",
     "Shift"
-
   ];
 
 
   if (allowedKeys.includes(event.key)) {
 
-    forestGame.keys[event.key] = false;
-
+    forestGame.keys[event.key] =
+      false;
   }
 }
 
@@ -853,9 +842,7 @@ function movePlayer() {
 
 
   if (moved) {
-
     checkForestBoundary();
-
   }
 }
 
@@ -888,13 +875,13 @@ function checkObjectProximity() {
   const room =
     forestGame.currentRoom;
 
-  const msgEl =
+  const message =
     document.getElementById(
       "forest-message"
     );
 
 
-  if (!room || !msgEl) {
+  if (!room || !message) {
     return;
   }
 
@@ -904,35 +891,29 @@ function checkObjectProximity() {
   let near = null;
 
 
-  /* ------------------------------------------------
+  /* --------------------------------------------------
      나무
-  ------------------------------------------------ */
+  -------------------------------------------------- */
 
   if (room.tree) {
 
     const distance =
       Math.hypot(
-
-        forestGame.playerX -
-          room.tree.x,
-
-        forestGame.playerY -
-          room.tree.y
-
+        forestGame.playerX - room.tree.x,
+        forestGame.playerY - room.tree.y
       );
 
 
     if (distance < threshold) {
 
       near = "tree";
-
     }
   }
 
 
-  /* ------------------------------------------------
+  /* --------------------------------------------------
      보물상자
-  ------------------------------------------------ */
+  -------------------------------------------------- */
 
   if (
     !near &&
@@ -942,20 +923,14 @@ function checkObjectProximity() {
 
     const distance =
       Math.hypot(
-
-        forestGame.playerX -
-          room.chest.x,
-
-        forestGame.playerY -
-          room.chest.y
-
+        forestGame.playerX - room.chest.x,
+        forestGame.playerY - room.chest.y
       );
 
 
     if (distance < threshold) {
 
       near = "chest";
-
     }
   }
 
@@ -963,31 +938,36 @@ function checkObjectProximity() {
   forestGame.nearObject = near;
 
 
-  /* ------------------------------------------------
+  /* --------------------------------------------------
      안내 문구
-  ------------------------------------------------ */
+  -------------------------------------------------- */
 
   if (near === "tree") {
 
-    msgEl.innerText =
+    message.innerText =
       "[Shift 키] 또는 [클릭]하여 나무 조사하기";
 
-    msgEl.classList.add("highlight");
+    message.classList.add(
+      "highlight"
+    );
 
   } else if (near === "chest") {
 
-    msgEl.innerText =
+    message.innerText =
       "[Shift 키] 또는 [클릭]하여 보물상자 열기";
 
-    msgEl.classList.add("highlight");
+    message.classList.add(
+      "highlight"
+    );
 
   } else {
 
-    msgEl.innerText =
+    message.innerText =
       "방향키로 이동하십시오.";
 
-    msgEl.classList.remove("highlight");
-
+    message.classList.remove(
+      "highlight"
+    );
   }
 }
 
@@ -1011,7 +991,6 @@ function checkInteraction() {
   ) {
 
     interactChest();
-
   }
 }
 
@@ -1031,24 +1010,28 @@ function interactTree() {
   }
 
 
-  const randomMonster =
-    MONSTER_LIST[
-      Math.floor(
-        Math.random() *
-        MONSTER_LIST.length
-      )
-    ];
+  /* --------------------------------------------------
+     몬스터 무작위 선택
+  -------------------------------------------------- */
+
+  const randomIndex =
+    Math.floor(
+      Math.random() *
+      MONSTER_LIST.length
+    );
 
 
-  room.tree.visited = true;
+  const monster =
+    MONSTER_LIST[randomIndex];
 
+
+  /* --------------------------------------------------
+     나무 조사 후 팝업
+  -------------------------------------------------- */
 
   showModal(
-
-    randomMonster.img,
-
-    `'${randomMonster.name}'을(를) 획득했다!`
-
+    monster.img,
+    `"${monster.name}"을(를) 획득했다!`
   );
 }
 
@@ -1068,10 +1051,13 @@ function interactChest() {
     !room.chest ||
     room.chest.opened
   ) {
-
     return;
   }
 
+
+  /* --------------------------------------------------
+     이미 열린 상자로 변경
+  -------------------------------------------------- */
 
   room.chest.opened = true;
 
@@ -1083,38 +1069,41 @@ function interactChest() {
 
 
   if (chestEl) {
-
     chestEl.innerText = "📦";
-
   }
 
 
-  const randomReward =
-    CHEST_REWARDS[
-      Math.floor(
-        Math.random() *
-        CHEST_REWARDS.length
-      )
-    ];
+  /* --------------------------------------------------
+     보상 무작위 선택
+  -------------------------------------------------- */
+
+  const randomIndex =
+    Math.floor(
+      Math.random() *
+      CHEST_REWARDS.length
+    );
 
 
-  /*
-     외부 placeholder 이미지 사용 안 함.
-     보물상자 자체를 CSS/이모지로 표시합니다.
-  */
+  const reward =
+    CHEST_REWARDS[randomIndex];
+
+
+  /* --------------------------------------------------
+     임시 이미지 링크는 사용하지 않습니다.
+     
+     아직 보물상자 이미지를 지정하지 않았으므로
+     팝업에는 보물상자 이모지를 사용합니다.
+  -------------------------------------------------- */
 
   showModal(
-
     "",
-
-    `보물상자에서 [${randomReward}]을(를) 획득했습니다!`
-
+    `보물상자에서 [${reward}]을(를) 획득했습니다!`
   );
 }
 
 
 /* ==================================================
-   모달
+   팝업 출력
 ================================================== */
 
 function showModal(imgUrl, text) {
@@ -1136,36 +1125,41 @@ function showModal(imgUrl, text) {
 
 
   if (
-    modal &&
-    modalImg &&
-    modalText
+    !modal ||
+    !modalImg ||
+    !modalText
   ) {
-
-    if (imgUrl) {
-
-      modalImg.src = imgUrl;
-
-      modalImg.style.display =
-        "block";
-
-    } else {
-
-      modalImg.style.display =
-        "none";
-
-    }
-
-
-    modalText.innerText = text;
-
-    modal.style.display =
-      "flex";
+    return;
   }
+
+
+  if (imgUrl) {
+
+    modalImg.src = imgUrl;
+
+    modalImg.style.display =
+      "block";
+
+  } else {
+
+    modalImg.removeAttribute(
+      "src"
+    );
+
+    modalImg.style.display =
+      "none";
+  }
+
+
+  modalText.innerText = text;
+
+  modal.style.display =
+    "flex";
 }
 
 
 /* ==================================================
-   모달 닫기
+   팝업 닫기
 ================================================== */
 
 function closeModal() {
@@ -1180,7 +1174,6 @@ function closeModal() {
 
     modal.style.display =
       "none";
-
   }
 }
 
@@ -1202,9 +1195,9 @@ function checkForestBoundary() {
   }
 
 
-  /* =================================================
+  /* ==================================================
      위쪽
-  ================================================= */
+  ================================================== */
 
   if (forestGame.playerY <= edge) {
 
@@ -1213,32 +1206,22 @@ function checkForestBoundary() {
 
     if (room.exits.up) {
 
-      /*
-         현재 방의 부모 방향이 down이라면
-         위쪽으로 들어온 방이므로
-         위쪽으로 돌아갈 때 부모 방으로 이동합니다.
-      */
-
-      if (
-        room.parentDirection === "down"
-      ) {
-
-        moveBackOrExit();
-
-      } else {
-
-        enterDeeperForest("up");
-
-      }
-
-      return;
+      handleDirection("up");
     }
   }
 
 
-  /* =================================================
+  /* ==================================================
      아래쪽
-  ================================================= */
+
+     매우 중요:
+
+     depth === 0이고 아래 출구가 없으면
+     지도 화면으로 돌아갑니다.
+
+     깊은 숲에서는 아래쪽으로 이동했을 때
+     부모 방으로 돌아갑니다.
+  ================================================== */
 
   if (
     forestGame.playerY >=
@@ -1249,54 +1232,26 @@ function checkForestBoundary() {
       100 - edge;
 
 
-    /*
-       첫 번째 숲의 아래쪽은
-       무조건 지도으로 돌아갑니다.
-    */
-
-    if (forestGame.depth === 0) {
-
-      exitForestGame();
-
-      return;
-    }
-
-
-    /*
-       깊은 숲에서는
-       현재 방으로 들어온 방향의 반대 방향이면
-       부모 숲으로 돌아갑니다.
-
-       예:
-       위쪽으로 들어왔다면
-       아래쪽 → 부모 숲
-
-       왼쪽으로 들어왔다면
-       오른쪽 → 부모 숲
-    */
-
-    if (
-      room.parentDirection === "up"
-    ) {
-
-      moveBackOrExit();
-
-      return;
-    }
-
-
     if (room.exits.down) {
 
-      enterDeeperForest("down");
+      handleDirection("down");
+
+    } else if (
+      forestGame.depth === 0
+    ) {
+
+      /* 최초 숲에서만 지도으로 돌아감 */
+
+      exitForestGame();
 
       return;
     }
   }
 
 
-  /* =================================================
+  /* ==================================================
      왼쪽
-  ================================================= */
+  ================================================== */
 
   if (forestGame.playerX <= edge) {
 
@@ -1305,26 +1260,14 @@ function checkForestBoundary() {
 
     if (room.exits.left) {
 
-      if (
-        room.parentDirection === "right"
-      ) {
-
-        moveBackOrExit();
-
-      } else {
-
-        enterDeeperForest("left");
-
-      }
-
-      return;
+      handleDirection("left");
     }
   }
 
 
-  /* =================================================
+  /* ==================================================
      오른쪽
-  ================================================= */
+  ================================================== */
 
   if (
     forestGame.playerX >=
@@ -1337,26 +1280,59 @@ function checkForestBoundary() {
 
     if (room.exits.right) {
 
-      if (
-        room.parentDirection === "left"
-      ) {
-
-        moveBackOrExit();
-
-      } else {
-
-        enterDeeperForest("right");
-
-      }
-
-      return;
+      handleDirection("right");
     }
   }
 }
 
 
 /* ==================================================
-   더 깊은 숲으로 이동
+   방향 이동 처리
+================================================== */
+
+function handleDirection(direction) {
+
+  const room =
+    forestGame.currentRoom;
+
+
+  if (!room) {
+    return;
+  }
+
+
+  /* --------------------------------------------------
+     이미 연결된 방이 있다면
+     절대로 새 방을 만들지 않습니다.
+     
+     이것이 기존 코드와 가장 중요한 차이입니다.
+  -------------------------------------------------- */
+
+  if (
+    room.connections[direction]
+  ) {
+
+    moveToExistingRoom(
+      direction
+    );
+
+    return;
+  }
+
+
+  /* --------------------------------------------------
+     아직 생성되지 않은 방향이라면
+     새로운 방을 생성합니다.
+  -------------------------------------------------- */
+
+  enterDeeperForest(
+    direction
+  );
+}
+
+
+/* ==================================================
+   새로운 깊은 숲으로 이동
 ================================================== */
 
 function enterDeeperForest(direction) {
@@ -1373,94 +1349,99 @@ function enterDeeperForest(direction) {
   forestGame.keys = {};
 
 
-  /* ------------------------------------------------
-     특수 나무 방인지 확인
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     현재 방에서 해당 방향으로 이동할 때
+     나무 방으로 지정되어 있었는지 확인
+  -------------------------------------------------- */
 
   const isSpecialTreeRoom =
-
     currentRoom.specialTreeDirection ===
     direction;
 
 
-  /* ------------------------------------------------
-     현재 방을 기록
-  ------------------------------------------------ */
+  /* --------------------------------------------------
+     새로운 방 생성
+  -------------------------------------------------- */
+
+  const newRoom =
+    createForestRoom(
+      direction,
+      isSpecialTreeRoom
+    );
+
+
+  /* --------------------------------------------------
+     양쪽 방을 서로 연결
+     
+     현재 방 → 새 방
+     새 방 → 현재 방
+     
+     이후 다시 돌아왔을 때
+     기존 방을 그대로 사용합니다.
+  -------------------------------------------------- */
+
+  currentRoom.connections[direction] =
+    newRoom;
+
+
+  const opposite =
+    getOppositeDirection(
+      direction
+    );
+
+
+  if (opposite) {
+
+    newRoom.connections[opposite] =
+      currentRoom;
+  }
+
+
+  /* --------------------------------------------------
+     현재 방을 history에 저장
+  -------------------------------------------------- */
 
   forestGame.roomHistory.push(
     currentRoom
   );
 
 
-  /* ------------------------------------------------
-     중요:
-     이미 만들어진 방이면 그대로 사용합니다.
-
-     처음 가는 방향:
-     새 방 생성
-
-     다시 가는 방향:
-     기존 방 사용
-
-     따라서 랜덤 확률도 한 번만 적용됩니다.
-  ------------------------------------------------ */
-
-  if (
-    currentRoom.children[direction]
-  ) {
-
-    forestGame.currentRoom =
-      currentRoom.children[direction];
-
-  } else {
-
-    const newRoom =
-      createForestRoom(
-        direction,
-        isSpecialTreeRoom
-      );
-
-
-    currentRoom.children[direction] =
-      newRoom;
-
-
-    forestGame.currentRoom =
-      newRoom;
-  }
-
-
-  /* ------------------------------------------------
-     깊이 증가
-  ------------------------------------------------ */
-
   forestGame.depth++;
 
 
-  /* ------------------------------------------------
-     새 방의 시작 위치
-  ------------------------------------------------ */
+  forestGame.currentRoom =
+    newRoom;
+
+
+  /* --------------------------------------------------
+     새 방에 들어온 위치
+  -------------------------------------------------- */
 
   if (direction === "up") {
 
     forestGame.playerX = 50;
     forestGame.playerY = 90;
 
-  } else if (direction === "down") {
+  } else if (
+    direction === "down"
+  ) {
 
     forestGame.playerX = 50;
     forestGame.playerY = 10;
 
-  } else if (direction === "left") {
+  } else if (
+    direction === "left"
+  ) {
 
     forestGame.playerX = 90;
     forestGame.playerY = 50;
 
-  } else if (direction === "right") {
+  } else if (
+    direction === "right"
+  ) {
 
     forestGame.playerX = 10;
     forestGame.playerY = 50;
-
   }
 
 
@@ -1469,84 +1450,106 @@ function enterDeeperForest(direction) {
 
 
 /* ==================================================
-   이전 숲으로 돌아가기
+   기존에 생성된 숲으로 이동
 ================================================== */
 
-function moveBackOrExit() {
+function moveToExistingRoom(direction) {
 
-  forestGame.keys = {};
+  const currentRoom =
+    forestGame.currentRoom;
 
 
-  /* ------------------------------------------------
-     첫 번째 숲이라면 지도으로 나가기
-  ------------------------------------------------ */
-
-  if (
-    forestGame.depth === 0 ||
-    forestGame.roomHistory.length === 0
-  ) {
-
-    exitForestGame();
-
+  if (!currentRoom) {
     return;
   }
 
 
-  /* ------------------------------------------------
-     현재 방으로 들어왔던 방향
-  ------------------------------------------------ */
-
-  const enteredDirection =
-    forestGame.currentRoom.parentDirection;
+  const targetRoom =
+    currentRoom.connections[
+      direction
+    ];
 
 
-  /* ------------------------------------------------
-     부모 방 가져오기
-  ------------------------------------------------ */
+  if (!targetRoom) {
+    return;
+  }
 
-  const previousRoom =
-    forestGame.roomHistory.pop();
+
+  forestGame.keys = {};
+
+
+  /* --------------------------------------------------
+     현재 방보다 한 단계 깊은 방으로 이동
+  -------------------------------------------------- */
+
+  if (
+    targetRoom.parentDirection ===
+    direction
+  ) {
+
+    forestGame.roomHistory.push(
+      currentRoom
+    );
+
+    forestGame.depth++;
+
+  } else {
+
+    /* --------------------------------------------------
+       기존 방으로 되돌아가는 경우
+       
+       history의 마지막 방을 제거합니다.
+    -------------------------------------------------- */
+
+    if (
+      forestGame.roomHistory.length > 0
+    ) {
+
+      forestGame.roomHistory.pop();
+    }
+
+    forestGame.depth--;
+
+    if (forestGame.depth < 0) {
+      forestGame.depth = 0;
+    }
+  }
 
 
   forestGame.currentRoom =
-    previousRoom;
+    targetRoom;
 
 
-  forestGame.depth--;
+  /* --------------------------------------------------
+     이동한 방향에 따라
+     플레이어 위치 설정
+  -------------------------------------------------- */
 
-
-  /* ------------------------------------------------
-     부모 방에서 플레이어가 나타날 위치
-
-     현재 방으로 들어왔던 방향의 반대쪽입니다.
-  ------------------------------------------------ */
-
-  const returnDirection =
-    getOppositeDirection(
-      enteredDirection
-    );
-
-
-  if (returnDirection === "up") {
-
-    forestGame.playerX = 50;
-    forestGame.playerY = 10;
-
-  } else if (returnDirection === "down") {
+  if (direction === "up") {
 
     forestGame.playerX = 50;
     forestGame.playerY = 90;
 
-  } else if (returnDirection === "left") {
+  } else if (
+    direction === "down"
+  ) {
 
-    forestGame.playerX = 10;
-    forestGame.playerY = 50;
+    forestGame.playerX = 50;
+    forestGame.playerY = 10;
 
-  } else if (returnDirection === "right") {
+  } else if (
+    direction === "left"
+  ) {
 
     forestGame.playerX = 90;
     forestGame.playerY = 50;
 
+  } else if (
+    direction === "right"
+  ) {
+
+    forestGame.playerX = 10;
+    forestGame.playerY = 50;
   }
 
 
@@ -1560,11 +1563,17 @@ function moveBackOrExit() {
 
 function exitForestGame() {
 
-  console.log("숲에서 나갑니다.");
+  console.log(
+    "숲에서 나갑니다."
+  );
 
 
   stopForestKeyboard();
 
+
+  /* --------------------------------------------------
+     애니메이션 정지
+  -------------------------------------------------- */
 
   if (forestGame.animationId) {
 
@@ -1572,37 +1581,57 @@ function exitForestGame() {
       forestGame.animationId
     );
 
-    forestGame.animationId = null;
+    forestGame.animationId =
+      null;
   }
 
+
+  /* --------------------------------------------------
+     화면 제거
+  -------------------------------------------------- */
 
   if (forestGame.screen) {
 
     forestGame.screen.remove();
 
-    forestGame.screen = null;
+    forestGame.screen =
+      null;
   }
 
 
-  forestGame.player = null;
+  /* --------------------------------------------------
+     상태 초기화
+  -------------------------------------------------- */
 
-  forestGame.currentRoom = null;
+  forestGame.player =
+    null;
 
-  forestGame.roomHistory = [];
+  forestGame.currentRoom =
+    null;
 
-  forestGame.depth = 0;
+  forestGame.roomHistory =
+    [];
 
-  forestGame.playerX = 50;
+  forestGame.depth =
+    0;
 
-  forestGame.playerY = 50;
+  forestGame.playerX =
+    50;
 
-  forestGame.keys = {};
+  forestGame.playerY =
+    50;
 
-  forestGame.forestNumber = null;
+  forestGame.keys =
+    {};
 
-  forestGame.shelterName = "";
+  forestGame.forestNumber =
+    null;
 
-  forestGame.nearObject = null;
+  forestGame.shelterName =
+    "";
+
+  forestGame.nearObject =
+    null;
 }
 
 
@@ -1617,13 +1646,14 @@ function addForestGameStyle() {
       "forest-game-style"
     )
   ) {
-
     return;
   }
 
 
   const style =
-    document.createElement("style");
+    document.createElement(
+      "style"
+    );
 
 
   style.id =
@@ -1631,6 +1661,10 @@ function addForestGameStyle() {
 
 
   style.innerHTML = `
+
+    /* ==================================================
+       전체 화면
+    ================================================== */
 
     #forest-game-screen {
 
@@ -1647,9 +1681,12 @@ function addForestGameStyle() {
       color: white;
 
       font-family: sans-serif;
-
     }
 
+
+    /* ==================================================
+       숲 배경
+    ================================================== */
 
     .forest-game {
 
@@ -1661,40 +1698,19 @@ function addForestGameStyle() {
 
       overflow: hidden;
 
-      background: #172116;
-
+      background:
+        radial-gradient(
+          ellipse at center,
+          #465a3d 0%,
+          #263522 55%,
+          #172116 100%
+        );
     }
 
 
-    /* ==========================================
-       실제 숲 이미지가 들어가는 영역
-    ========================================== */
-
-    .forest-room {
-
-      position: absolute;
-
-      left: 0;
-
-      right: 0;
-
-      top: 55px;
-
-      bottom: 45px;
-
-      overflow: hidden;
-
-      background-position: center;
-
-      background-size: cover;
-
-      background-repeat: no-repeat;
-
-      transition:
-        background-image 0.25s ease;
-
-    }
-
+    /* ==================================================
+       상단
+    ================================================== */
 
     .forest-header {
 
@@ -1716,11 +1732,10 @@ function addForestGameStyle() {
 
       align-items: center;
 
-      z-index: 20;
+      z-index: 10;
 
       background:
-        rgba(0, 0, 0, 0.45);
-
+        rgba(0, 0, 0, 0.35);
     }
 
 
@@ -1729,7 +1744,6 @@ function addForestGameStyle() {
       display: block;
 
       font-size: 20px;
-
     }
 
 
@@ -1742,9 +1756,12 @@ function addForestGameStyle() {
       font-size: 12px;
 
       color: #c9d0c6;
-
     }
 
+
+    /* ==================================================
+       지도으로 돌아가기
+    ================================================== */
 
     .forest-exit-button {
 
@@ -1762,7 +1779,6 @@ function addForestGameStyle() {
       cursor: pointer;
 
       font-size: 13px;
-
     }
 
 
@@ -1770,13 +1786,66 @@ function addForestGameStyle() {
 
       background:
         rgba(255, 255, 255, 0.25);
-
     }
 
 
-    /* ==========================================
-       숲 출입구
-    ========================================== */
+    /* ==================================================
+       방
+    ================================================== */
+
+    .forest-room {
+
+      position: absolute;
+
+      left: 0;
+
+      right: 0;
+
+      top: 55px;
+
+      bottom: 45px;
+
+      overflow: hidden;
+    }
+
+
+    /* ==================================================
+       중앙 밝은 부분
+    ================================================== */
+
+    .forest-room::before {
+
+      content: "";
+
+      position: absolute;
+
+      left: 50%;
+
+      top: 50%;
+
+      width: 42%;
+
+      height: 42%;
+
+      transform:
+        translate(-50%, -50%);
+
+      border-radius: 50%;
+
+      background:
+        rgba(88, 112, 70, 0.18);
+
+      box-shadow:
+        0 0 80px
+        rgba(0, 0, 0, 0.35);
+
+      pointer-events: none;
+    }
+
+
+    /* ==================================================
+       숲 입구
+    ================================================== */
 
     .forest-entrance {
 
@@ -1786,13 +1855,15 @@ function addForestGameStyle() {
         rgba(10, 15, 10, 0.75);
 
       box-shadow:
-        inset 0 0 30px rgba(0, 0, 0, 0.85),
-        0 0 25px rgba(0, 0, 0, 0.3);
+        inset 0 0 30px
+        rgba(0, 0, 0, 0.85),
+
+        0 0 25px
+        rgba(0, 0, 0, 0.3);
 
       pointer-events: none;
 
-      z-index: 4;
-
+      z-index: 2;
     }
 
 
@@ -1800,28 +1871,27 @@ function addForestGameStyle() {
 
       left: 50%;
 
-      top: 0;
+      top: 2%;
 
       width: 160px;
 
-      height: 70px;
+      height: 80px;
 
       transform:
         translateX(-50%);
 
       border-radius:
-        0 0 80px 80px;
-
+        80px 80px 0 0;
     }
 
 
     .forest-left {
 
-      left: 0;
+      left: 2%;
 
       top: 50%;
 
-      width: 70px;
+      width: 80px;
 
       height: 160px;
 
@@ -1830,17 +1900,16 @@ function addForestGameStyle() {
 
       border-radius:
         0 80px 80px 0;
-
     }
 
 
     .forest-right {
 
-      right: 0;
+      right: 2%;
 
       top: 50%;
 
-      width: 70px;
+      width: 80px;
 
       height: 160px;
 
@@ -1849,7 +1918,6 @@ function addForestGameStyle() {
 
       border-radius:
         80px 0 0 80px;
-
     }
 
 
@@ -1857,24 +1925,23 @@ function addForestGameStyle() {
 
       left: 50%;
 
-      bottom: 0;
+      bottom: 2%;
 
       width: 160px;
 
-      height: 70px;
+      height: 80px;
 
       transform:
         translateX(-50%);
 
       border-radius:
-        80px 80px 0 0;
-
+        0 0 80px 80px;
     }
 
 
-    /* ==========================================
+    /* ==================================================
        나무 / 보물상자
-    ========================================== */
+    ================================================== */
 
     .forest-object {
 
@@ -1887,13 +1954,12 @@ function addForestGameStyle() {
 
       cursor: pointer;
 
-      z-index: 8;
+      z-index: 4;
 
       user-select: none;
 
       transition:
         transform 0.2s;
-
     }
 
 
@@ -1902,47 +1968,44 @@ function addForestGameStyle() {
       transform:
         translate(-50%, -50%)
         scale(1.2);
-
     }
 
 
-    /* ==========================================
+    /* ==================================================
        플레이어
-    ========================================== */
+    ================================================== */
 
     .forest-player {
 
       position: absolute;
 
-      width: 42px;
+      width: 30px;
 
-      height: 42px;
-
-      object-fit: contain;
+      height: 30px;
 
       transform:
         translate(-50%, -50%);
 
-      z-index: 10;
+      border-radius: 50%;
 
-      user-select: none;
+      background: #ffffff;
 
-      pointer-events: none;
+      border:
+        3px solid #111111;
 
-      image-rendering: pixelated;
+      box-sizing: border-box;
 
-      filter:
-        drop-shadow(
-          0 2px 4px
-          rgba(0, 0, 0, 0.7)
-        );
+      z-index: 5;
 
+      box-shadow:
+        0 0 12px
+        rgba(255, 255, 255, 0.5);
     }
 
 
-    /* ==========================================
+    /* ==================================================
        안내 문구
-    ========================================== */
+    ================================================== */
 
     .forest-message {
 
@@ -1955,14 +2018,14 @@ function addForestGameStyle() {
       transform:
         translateX(-50%);
 
-      z-index: 20;
+      z-index: 10;
 
       padding: 6px 12px;
 
       border-radius: 8px;
 
       background:
-        rgba(0, 0, 0, 0.55);
+        rgba(0, 0, 0, 0.45);
 
       color: #e5e5e5;
 
@@ -1974,25 +2037,23 @@ function addForestGameStyle() {
 
       transition:
         all 0.3s;
-
     }
 
 
     .forest-message.highlight {
 
       background:
-        rgba(255, 193, 7, 0.9);
+        rgba(255, 193, 7, 0.85);
 
       color: #111;
 
       font-weight: bold;
-
     }
 
 
-    /* ==========================================
+    /* ==================================================
        팝업
-    ========================================== */
+    ================================================== */
 
     .forest-modal {
 
@@ -2001,7 +2062,7 @@ function addForestGameStyle() {
       inset: 0;
 
       background:
-        rgba(0, 0, 0, 0.72);
+        rgba(0, 0, 0, 0.7);
 
       z-index: 100;
 
@@ -2010,7 +2071,6 @@ function addForestGameStyle() {
       justify-content: center;
 
       align-items: center;
-
     }
 
 
@@ -2034,7 +2094,6 @@ function addForestGameStyle() {
       max-width: 280px;
 
       width: 80%;
-
     }
 
 
@@ -2046,15 +2105,12 @@ function addForestGameStyle() {
 
       object-fit: contain;
 
-      image-rendering: pixelated;
-
       border-radius: 8px;
 
       margin-bottom: 12px;
 
       border:
-        2px solid white;
-
+        2px solid #fff;
     }
 
 
@@ -2064,10 +2120,9 @@ function addForestGameStyle() {
 
       font-weight: bold;
 
-      color: white;
+      color: #fff;
 
       margin-bottom: 16px;
-
     }
 
 
@@ -2086,14 +2141,12 @@ function addForestGameStyle() {
       font-weight: bold;
 
       cursor: pointer;
-
     }
 
 
     .modal-close-btn:hover {
 
       background: #a5d6a7;
-
     }
 
   `;
@@ -2107,4 +2160,6 @@ function addForestGameStyle() {
    forest.js 로드 확인
 ================================================== */
 
-console.log("forest.js 로드 성공");
+console.log(
+  "forest.js 로드 성공"
+);
