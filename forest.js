@@ -1,29 +1,52 @@
+
 /* ==================================================
    숲 탐험 게임
    forest.js
 ================================================== */
 
-// ==================================================
-// 숲 게임 전역 변수
-// ==================================================
+
+/* ==================================================
+   숲 게임 전역 상태
+================================================== */
 
 let forestGame = {
   depth: 0,
+
   currentRoom: null,
+
+  // 이전 숲들을 저장하는 스택
   roomHistory: [],
+
   screen: null,
+
   player: null,
+
   playerX: 50,
+
   playerY: 50,
+
   keys: {},
-  animationId: null
+
+  animationId: null,
+
+  forestNumber: null,
+
+  shelterName: ""
 };
 
-// ==================================================
-// HTML 이스케이프 유틸리티 함수
-// ==================================================
+
+/* ==================================================
+   HTML 이스케이프
+================================================== */
+
 function escapeHtml(text) {
-  if (!text) return "";
+
+  if (
+    text === null ||
+    text === undefined
+  ) {
+    return "";
+  }
 
   return String(text)
     .replace(/&/g, "&amp;")
@@ -33,12 +56,24 @@ function escapeHtml(text) {
     .replace(/'/g, "&#039;");
 }
 
-// ==================================================
-// 숲 공간 생성
-// ==================================================
+
+/* ==================================================
+   숲 방 생성
+==================================================
+
+   parentDirection
+   = 현재 숲으로 들어온 방향
+
+   예:
+   ↑ 방향으로 깊은 숲에 들어왔다면
+   그 숲의 ↓ 방향은 반드시 이전 숲으로 돌아가는 길
+
+================================================== */
+
 function createForestRoom(parentDirection) {
 
   const room = {
+
     parentDirection: parentDirection,
 
     exits: {
@@ -47,53 +82,97 @@ function createForestRoom(parentDirection) {
       up: false,
       down: false
     }
+
   };
 
-  // 이전 숲으로 돌아가는 길
-  const opposite = getOppositeDirection(parentDirection);
+
+  /* ------------------------------------------
+     이전 숲으로 돌아가는 길
+  ------------------------------------------ */
+
+  const opposite =
+    getOppositeDirection(parentDirection);
 
   if (opposite) {
+
     room.exits[opposite] = true;
+
   }
 
-  // 더 깊은 숲이 존재할 확률
+
+  /* ------------------------------------------
+     더 깊은 숲 생성 확률
+     
+     현재는 25%
+     
+     즉,
+     대부분의 방향에는 숲이 없고
+     일부 방향에만 숲이 존재합니다.
+  ------------------------------------------ */
+
   const deeperForestProbability = 0.25;
+
+
+  /* 왼쪽 */
 
   if (
     parentDirection !== "left" &&
     Math.random() < deeperForestProbability
   ) {
+
     room.exits.left = true;
+
   }
+
+
+  /* 오른쪽 */
 
   if (
     parentDirection !== "right" &&
     Math.random() < deeperForestProbability
   ) {
+
     room.exits.right = true;
+
   }
+
+
+  /* 위쪽 */
 
   if (
     parentDirection !== "up" &&
     Math.random() < deeperForestProbability
   ) {
+
     room.exits.up = true;
+
   }
+
+
+  /* 아래쪽 */
 
   if (
     parentDirection !== "down" &&
     Math.random() < deeperForestProbability
   ) {
+
     room.exits.down = true;
+
   }
+
 
   return room;
 }
 
-// ==================================================
-// 숲 진입
-// ==================================================
-function enterForest(forestNumber, shelterName) {
+
+/* ==================================================
+   숲 진입
+================================================== */
+
+function enterForest(
+  forestNumber,
+  shelterName
+) {
 
   console.log(
     "숲 탐험 시작:",
@@ -101,87 +180,150 @@ function enterForest(forestNumber, shelterName) {
     shelterName
   );
 
-  // 기존 게임 제거 및 정리
-  exitForestGame();
 
-  // 게임 초기화
+  /* ------------------------------------------
+     이미 숲이 열려 있다면 기존 게임 정리
+  ------------------------------------------ */
+
+  if (forestGame.screen) {
+
+    exitForestGame();
+
+  }
+
+
+  /* ------------------------------------------
+     게임 상태 초기화
+  ------------------------------------------ */
+
   forestGame.depth = 0;
+
   forestGame.roomHistory = [];
 
   forestGame.playerX = 50;
+
   forestGame.playerY = 50;
 
-  // ==============================================
-  // 첫 번째 숲
-  // ==============================================
-  // 첫 숲에서는
-  // ↑ ← → = 더 깊은 숲으로 이동 가능
-  // ↓ = 숲에서 나가기
-  //
-  // 따라서 down은 false로 설정합니다.
-  // ==============================================
+  forestGame.forestNumber =
+    forestNumber;
+
+  forestGame.shelterName =
+    shelterName;
+
+
+  /* ------------------------------------------
+     첫 번째 숲
+
+     ← → ↑ = 깊은 숲으로 이동 가능
+     ↓     = 지도 화면으로 나가기
+  ------------------------------------------ */
+
   forestGame.currentRoom = {
 
     parentDirection: null,
 
     exits: {
+
       left: true,
+
       right: true,
+
       up: true,
+
       down: false
+
     }
 
   };
 
-  // 게임 화면 생성
-  const screen = document.createElement("div");
 
-  screen.id = "forest-game-screen";
+  /* ------------------------------------------
+     게임 화면 생성
+  ------------------------------------------ */
+
+  const screen =
+    document.createElement("div");
+
+  screen.id =
+    "forest-game-screen";
+
 
   screen.innerHTML = `
+
     <div class="forest-game">
+
+      <!-- =====================================
+           상단 정보
+      ====================================== -->
 
       <div class="forest-header">
 
         <div>
-          <strong>숲 ${escapeHtml(forestNumber)}</strong>
+
+          <strong>
+            숲 ${escapeHtml(forestNumber)}
+          </strong>
 
           <span>
             ${escapeHtml(shelterName)}
           </span>
+
         </div>
 
+
         <button
+          type="button"
           class="forest-exit-button"
           onclick="exitForestGame()"
         >
-          나가기
+          지도으로 돌아가기
         </button>
 
       </div>
 
 
-      <div id="forest-room" class="forest-room">
+      <!-- =====================================
+           숲 공간
+      ====================================== -->
+
+      <div
+        id="forest-room"
+        class="forest-room"
+      >
+
+        <!-- 위쪽 입구 -->
 
         <div
           id="forest-up"
           class="forest-entrance forest-up"
         ></div>
 
+
+        <!-- 왼쪽 입구 -->
+
         <div
           id="forest-left"
           class="forest-entrance forest-left"
         ></div>
+
+
+        <!-- 오른쪽 입구 -->
 
         <div
           id="forest-right"
           class="forest-entrance forest-right"
         ></div>
 
+
+        <!-- 아래쪽 입구 -->
+
         <div
           id="forest-down"
           class="forest-entrance forest-down"
         ></div>
+
+
+        <!-- 임시 캐릭터 -->
 
         <div
           id="forest-player"
@@ -191,103 +333,183 @@ function enterForest(forestNumber, shelterName) {
       </div>
 
 
+      <!-- =====================================
+           안내
+      ====================================== -->
+
       <div class="forest-message">
+
         방향키로 이동하십시오.
+
       </div>
 
     </div>
 
+  `;
+
+
   document.body.appendChild(screen);
 
-  forestGame.screen = screen;
+
+  forestGame.screen =
+    screen;
+
 
   forestGame.player =
-    document.getElementById("forest-player");
+    document.getElementById(
+      "forest-player"
+    );
 
-  // CSS
+
+  /* ------------------------------------------
+     CSS 추가
+  ------------------------------------------ */
+
   addForestGameStyle();
 
-  // 키보드
+
+  /* ------------------------------------------
+     키보드 입력 시작
+  ------------------------------------------ */
+
   startForestKeyboard();
 
-  // 첫 방 표시
+
+  /* ------------------------------------------
+     첫 번째 방 표시
+  ------------------------------------------ */
+
   renderForestRoom();
 
-  // 게임 루프
+
+  /* ------------------------------------------
+     게임 루프 시작
+  ------------------------------------------ */
+
   forestGameLoop();
+
 }
 
-// ==================================================
-// 숲 공간 표시
-// ==================================================
+
+/* ==================================================
+   현재 숲 공간 표시
+================================================== */
+
 function renderForestRoom() {
 
-  const room = forestGame.currentRoom;
+  const room =
+    forestGame.currentRoom;
 
-  if (!room) return;
+
+  if (!room) {
+
+    return;
+
+  }
+
 
   const up =
-    document.getElementById("forest-up");
+    document.getElementById(
+      "forest-up"
+    );
+
 
   const left =
-    document.getElementById("forest-left");
+    document.getElementById(
+      "forest-left"
+    );
+
 
   const right =
-    document.getElementById("forest-right");
+    document.getElementById(
+      "forest-right"
+    );
+
 
   const down =
-    document.getElementById("forest-down");
+    document.getElementById(
+      "forest-down"
+    );
 
+
+  /* ------------------------------------------
+     입구 표시
+
+     true  → 어두운 반타원 표시
+     false → 표시하지 않음
+  ------------------------------------------ */
 
   if (up) {
+
     up.style.display =
       room.exits.up
         ? "block"
         : "none";
+
   }
 
+
   if (left) {
+
     left.style.display =
       room.exits.left
         ? "block"
         : "none";
+
   }
 
+
   if (right) {
+
     right.style.display =
       room.exits.right
         ? "block"
         : "none";
+
   }
 
+
   if (down) {
+
     down.style.display =
       room.exits.down
         ? "block"
         : "none";
+
   }
 
+
   updatePlayerPosition();
+
 }
 
-// ==================================================
-// 키보드 입력 관리
-// ==================================================
+
+/* ==================================================
+   키보드 입력 시작
+================================================== */
+
 function startForestKeyboard() {
 
   stopForestKeyboard();
+
 
   document.addEventListener(
     "keydown",
     forestKeyDown
   );
 
+
   document.addEventListener(
     "keyup",
     forestKeyUp
   );
+
 }
 
+
+/* ==================================================
+   키보드 입력 종료
+================================================== */
 
 function stopForestKeyboard() {
 
@@ -296,70 +518,120 @@ function stopForestKeyboard() {
     forestKeyDown
   );
 
+
   document.removeEventListener(
     "keyup",
     forestKeyUp
   );
 
+
   forestGame.keys = {};
+
 }
 
 
+/* ==================================================
+   키 눌림
+================================================== */
+
 function forestKeyDown(event) {
 
-  if (!forestGame.screen) return;
+  if (!forestGame.screen) {
+
+    return;
+
+  }
+
+
+  const allowedKeys = [
+
+    "ArrowUp",
+
+    "ArrowDown",
+
+    "ArrowLeft",
+
+    "ArrowRight"
+
+  ];
+
 
   if (
-    [
-      "ArrowUp",
-      "ArrowDown",
-      "ArrowLeft",
-      "ArrowRight"
-    ].includes(event.key)
+    allowedKeys.includes(event.key)
   ) {
 
     event.preventDefault();
 
-    forestGame.keys[event.key] = true;
+    forestGame.keys[event.key] =
+      true;
+
   }
+
 }
 
+
+/* ==================================================
+   키 뗌
+================================================== */
 
 function forestKeyUp(event) {
 
+  const allowedKeys = [
+
+    "ArrowUp",
+
+    "ArrowDown",
+
+    "ArrowLeft",
+
+    "ArrowRight"
+
+  ];
+
+
   if (
-    [
-      "ArrowUp",
-      "ArrowDown",
-      "ArrowLeft",
-      "ArrowRight"
-    ].includes(event.key)
+    allowedKeys.includes(event.key)
   ) {
 
-    forestGame.keys[event.key] = false;
+    forestGame.keys[event.key] =
+      false;
+
   }
+
 }
 
-// ==================================================
-// 게임 루프
-// ==================================================
+
+/* ==================================================
+   게임 루프
+================================================== */
+
 function forestGameLoop() {
 
-  if (!forestGame.screen) return;
+  if (!forestGame.screen) {
+
+    return;
+
+  }
+
 
   movePlayer();
 
+
   updatePlayerPosition();
+
 
   forestGame.animationId =
     requestAnimationFrame(
       forestGameLoop
     );
+
 }
 
-// ==================================================
-// 플레이어 이동
-// ==================================================
+
+/* ==================================================
+   플레이어 이동
+================================================== */
+
 function movePlayer() {
 
   const speed = 0.45;
@@ -367,75 +639,132 @@ function movePlayer() {
   let moved = false;
 
 
-  if (forestGame.keys["ArrowUp"]) {
+  /* ------------------------------------------
+     위
+  ------------------------------------------ */
 
-    forestGame.playerY -= speed;
+  if (
+    forestGame.keys["ArrowUp"]
+  ) {
+
+    forestGame.playerY -=
+      speed;
 
     moved = true;
+
   }
 
 
-  if (forestGame.keys["ArrowDown"]) {
+  /* ------------------------------------------
+     아래
+  ------------------------------------------ */
 
-    forestGame.playerY += speed;
+  if (
+    forestGame.keys["ArrowDown"]
+  ) {
+
+    forestGame.playerY +=
+      speed;
 
     moved = true;
+
   }
 
 
-  if (forestGame.keys["ArrowLeft"]) {
+  /* ------------------------------------------
+     왼쪽
+  ------------------------------------------ */
 
-    forestGame.playerX -= speed;
+  if (
+    forestGame.keys["ArrowLeft"]
+  ) {
+
+    forestGame.playerX -=
+      speed;
 
     moved = true;
+
   }
 
 
-  if (forestGame.keys["ArrowRight"]) {
+  /* ------------------------------------------
+     오른쪽
+  ------------------------------------------ */
 
-    forestGame.playerX += speed;
+  if (
+    forestGame.keys["ArrowRight"]
+  ) {
+
+    forestGame.playerX +=
+      speed;
 
     moved = true;
+
   }
 
 
   if (moved) {
 
     checkForestBoundary();
+
   }
+
 }
 
-// ==================================================
-// 플레이어 위치 적용
-// ==================================================
+
+/* ==================================================
+   플레이어 위치 적용
+================================================== */
+
 function updatePlayerPosition() {
 
-  if (!forestGame.player) return;
+  if (!forestGame.player) {
+
+    return;
+
+  }
+
 
   forestGame.player.style.left =
     forestGame.playerX + "%";
 
+
   forestGame.player.style.top =
     forestGame.playerY + "%";
+
 }
 
-// ==================================================
-// 숲의 경계 확인 및 방 이동
-// ==================================================
+
+/* ==================================================
+   숲 경계 확인
+================================================== */
+
 function checkForestBoundary() {
 
   const edge = 5;
 
-  // ==============================================
-  // 위쪽 경계
-  // ==============================================
-  if (forestGame.playerY <= edge) {
 
-    forestGame.playerY = edge;
+  /* ==========================================
+     위쪽
+  ========================================== */
+
+  if (
+    forestGame.playerY <= edge
+  ) {
+
+    forestGame.playerY =
+      edge;
+
 
     if (
       forestGame.currentRoom.exits.up
     ) {
+
+      /*
+        현재 숲이 ↑ 방향으로 들어온 숲이라면
+        ↑ 방향은 더 깊은 숲으로 가는 것이 아니라
+        이전 숲으로 돌아가는 방향입니다.
+      */
 
       if (
         forestGame.currentRoom.parentDirection ===
@@ -444,28 +773,44 @@ function checkForestBoundary() {
 
         moveBackOrExit();
 
-      } else {
+      }
+
+      else {
 
         enterDeeperForest("up");
 
       }
+
     }
+
   }
 
 
-  // ==============================================
-  // 아래쪽 경계
-  // ==============================================
+  /* ==========================================
+     아래쪽
+  ========================================== */
+
   if (
-    forestGame.playerY >= 100 - edge
+    forestGame.playerY >=
+    100 - edge
   ) {
 
     forestGame.playerY =
       100 - edge;
 
+
     if (
       forestGame.currentRoom.exits.down
     ) {
+
+      /*
+        첫 번째 숲에서는 down이 false이므로
+        이곳에 들어오지 않습니다.
+
+        깊은 숲에서 ↓가 이전 숲으로
+        돌아가는 방향인 경우에만
+        moveBackOrExit()가 실행됩니다.
+      */
 
       if (
         forestGame.currentRoom.parentDirection ===
@@ -474,21 +819,47 @@ function checkForestBoundary() {
 
         moveBackOrExit();
 
-      } else {
+      }
+
+      else {
 
         enterDeeperForest("down");
 
       }
+
     }
+
+
+    /*
+      첫 번째 숲의 ↓
+
+      입구가 없으므로 위 조건이 실행되지 않습니다.
+      대신 아래 조건으로 지도에서 나갑니다.
+    */
+
+    if (
+      forestGame.depth === 0 &&
+      !forestGame.currentRoom.exits.down
+    ) {
+
+      exitForestGame();
+
+    }
+
   }
 
 
-  // ==============================================
-  // 왼쪽 경계
-  // ==============================================
-  if (forestGame.playerX <= edge) {
+  /* ==========================================
+     왼쪽
+  ========================================== */
 
-    forestGame.playerX = edge;
+  if (
+    forestGame.playerX <= edge
+  ) {
+
+    forestGame.playerX =
+      edge;
+
 
     if (
       forestGame.currentRoom.exits.left
@@ -501,24 +872,31 @@ function checkForestBoundary() {
 
         moveBackOrExit();
 
-      } else {
+      }
+
+      else {
 
         enterDeeperForest("left");
 
       }
+
     }
+
   }
 
 
-  // ==============================================
-  // 오른쪽 경계
-  // ==============================================
+  /* ==========================================
+     오른쪽
+  ========================================== */
+
   if (
-    forestGame.playerX >= 100 - edge
+    forestGame.playerX >=
+    100 - edge
   ) {
 
     forestGame.playerX =
       100 - edge;
+
 
     if (
       forestGame.currentRoom.exits.right
@@ -531,83 +909,131 @@ function checkForestBoundary() {
 
         moveBackOrExit();
 
-      } else {
+      }
+
+      else {
 
         enterDeeperForest("right");
 
       }
+
     }
+
   }
+
 }
 
-// ==================================================
-// 깊은 숲으로 이동
-// ==================================================
+
+/* ==================================================
+   더 깊은 숲으로 이동
+================================================== */
+
 function enterDeeperForest(direction) {
+
+  /*
+    키를 계속 누르고 있는 상태에서
+    방이 여러 번 생성되는 것을 방지
+  */
 
   forestGame.keys = {};
 
-  // 현재 방 저장
+
+  /* ------------------------------------------
+     현재 숲 저장
+  ------------------------------------------ */
+
   forestGame.roomHistory.push(
     forestGame.currentRoom
   );
 
+
+  /* ------------------------------------------
+     깊이 증가
+  ------------------------------------------ */
+
   forestGame.depth++;
 
 
-  // 새 방 생성
+  /* ------------------------------------------
+     새로운 숲 생성
+  ------------------------------------------ */
+
   forestGame.currentRoom =
     createForestRoom(direction);
 
 
-  // ==============================================
-  // 들어온 방향의 반대쪽에서 플레이어 등장
-  // ==============================================
+  /* ------------------------------------------
+     새 숲에 들어왔을 때
+     플레이어 시작 위치
+  ------------------------------------------ */
 
-  if (direction === "up") {
+  if (
+    direction === "up"
+  ) {
+
+    /*
+      위쪽으로 들어왔으므로
+      플레이어는 화면 아래쪽에서 시작
+    */
 
     forestGame.playerX = 50;
+
     forestGame.playerY = 90;
 
   }
 
-  else if (direction === "down") {
+
+  else if (
+    direction === "down"
+  ) {
 
     forestGame.playerX = 50;
+
     forestGame.playerY = 10;
 
   }
 
-  else if (direction === "left") {
+
+  else if (
+    direction === "left"
+  ) {
 
     forestGame.playerX = 90;
+
     forestGame.playerY = 50;
 
   }
 
-  else if (direction === "right") {
+
+  else if (
+    direction === "right"
+  ) {
 
     forestGame.playerX = 10;
+
     forestGame.playerY = 50;
 
   }
 
 
   renderForestRoom();
+
 }
 
-// ==================================================
-// 이전 숲으로 돌아가기 또는 나가기
-// ==================================================
+
+/* ==================================================
+   이전 숲으로 돌아가기 또는 지도에서 나가기
+================================================== */
+
 function moveBackOrExit() {
 
   forestGame.keys = {};
 
 
-  // ==============================================
-  // 최초 숲에서 뒤로 가려고 하는 경우
-  // → 지도 화면으로 복귀
-  // ==============================================
+  /* ------------------------------------------
+     첫 번째 숲이라면 지도 화면으로 나감
+  ------------------------------------------ */
+
   if (
     forestGame.depth === 0 ||
     forestGame.roomHistory.length === 0
@@ -616,76 +1042,120 @@ function moveBackOrExit() {
     exitForestGame();
 
     return;
+
   }
 
+
+  /* ------------------------------------------
+     현재 깊은 숲으로 들어온 방향
+  ------------------------------------------ */
 
   const prevDirection =
     forestGame.currentRoom.parentDirection;
 
 
-  // 이전 방 복원
+  /* ------------------------------------------
+     깊이 감소
+  ------------------------------------------ */
+
   forestGame.depth--;
+
+
+  /* ------------------------------------------
+     이전 숲 복원
+  ------------------------------------------ */
 
   forestGame.currentRoom =
     forestGame.roomHistory.pop();
 
 
-  // ==============================================
-  // 들어왔던 방향의 반대쪽에서 등장
-  // ==============================================
+  /* ------------------------------------------
+     이전 숲에서 돌아온 위치
 
-  if (prevDirection === "up") {
+     예:
+     ↑로 깊은 숲에 들어감
+     ↓로 돌아옴
+
+     → 이전 숲의 위쪽에서 시작
+  ------------------------------------------ */
+
+  if (
+    prevDirection === "up"
+  ) {
 
     forestGame.playerX = 50;
+
     forestGame.playerY = 10;
 
   }
 
-  else if (prevDirection === "down") {
+
+  else if (
+    prevDirection === "down"
+  ) {
 
     forestGame.playerX = 50;
+
     forestGame.playerY = 90;
 
   }
 
-  else if (prevDirection === "left") {
+
+  else if (
+    prevDirection === "left"
+  ) {
 
     forestGame.playerX = 10;
+
     forestGame.playerY = 50;
 
   }
 
-  else if (prevDirection === "right") {
+
+  else if (
+    prevDirection === "right"
+  ) {
 
     forestGame.playerX = 90;
+
     forestGame.playerY = 50;
 
   }
 
 
   renderForestRoom();
+
 }
 
-// ==================================================
-// 반대 방향 구하기
-// ==================================================
+
+/* ==================================================
+   반대 방향
+================================================== */
+
 function getOppositeDirection(direction) {
 
   const map = {
 
     left: "right",
+
     right: "left",
+
     up: "down",
+
     down: "up"
 
   };
 
+
   return map[direction] || null;
+
 }
 
-// ==================================================
-// 숲에서 나가기
-// ==================================================
+
+/* ==================================================
+   숲에서 나가기
+================================================== */
+
 function exitForestGame() {
 
   console.log(
@@ -693,42 +1163,90 @@ function exitForestGame() {
   );
 
 
+  /* ------------------------------------------
+     키보드 이벤트 제거
+  ------------------------------------------ */
+
   stopForestKeyboard();
 
 
-  if (forestGame.animationId) {
+  /* ------------------------------------------
+     게임 루프 정지
+  ------------------------------------------ */
+
+  if (
+    forestGame.animationId
+  ) {
 
     cancelAnimationFrame(
       forestGame.animationId
     );
 
-    forestGame.animationId = null;
+    forestGame.animationId =
+      null;
+
   }
 
 
-  if (forestGame.screen) {
+  /* ------------------------------------------
+     숲 화면 제거
+  ------------------------------------------ */
+
+  if (
+    forestGame.screen
+  ) {
 
     forestGame.screen.remove();
 
-    forestGame.screen = null;
+    forestGame.screen =
+      null;
+
   }
 
 
-  forestGame.player = null;
+  /* ------------------------------------------
+     상태 초기화
+  ------------------------------------------ */
 
-  forestGame.currentRoom = null;
+  forestGame.player =
+    null;
 
-  forestGame.roomHistory = [];
+  forestGame.currentRoom =
+    null;
 
-  forestGame.depth = 0;
+  forestGame.roomHistory =
+    [];
 
-  forestGame.keys = {};
+  forestGame.depth =
+    0;
+
+  forestGame.playerX =
+    50;
+
+  forestGame.playerY =
+    50;
+
+  forestGame.keys =
+    {};
+
+  forestGame.forestNumber =
+    null;
+
+  forestGame.shelterName =
+    "";
+
 }
 
-// ==================================================
-// 숲 게임 CSS
-// ==================================================
+
+/* ==================================================
+   숲 게임 CSS
+================================================== */
+
 function addForestGameStyle() {
+
+  /*
+    이미 CSS가 있다면 다시 만들지 않음
+  */
 
   if (
     document.getElementById(
@@ -737,17 +1255,29 @@ function addForestGameStyle() {
   ) {
 
     return;
+
   }
 
 
   const style =
-    document.createElement("style");
+    document.createElement(
+      "style"
+    );
+
 
   style.id =
     "forest-game-style";
 
 
-  style.innerHTML = 
+  /*
+    반드시 백틱으로 CSS 전체를 감쌉니다.
+  */
+
+  style.innerHTML = `
+
+    /* ==========================================
+       전체 화면
+    ========================================== */
 
     #forest-game-screen {
 
@@ -757,12 +1287,20 @@ function addForestGameStyle() {
 
       z-index: 9999;
 
+      width: 100vw;
+
+      height: 100vh;
+
       color: white;
 
       font-family: sans-serif;
 
     }
 
+
+    /* ==========================================
+       숲 전체
+    ========================================== */
 
     .forest-game {
 
@@ -790,6 +1328,10 @@ function addForestGameStyle() {
 
     }
 
+
+    /* ==========================================
+       상단 정보
+    ========================================== */
 
     .forest-header {
 
@@ -842,6 +1384,10 @@ function addForestGameStyle() {
     }
 
 
+    /* ==========================================
+       나가기 버튼
+    ========================================== */
+
     .forest-exit-button {
 
       border: none;
@@ -858,8 +1404,23 @@ function addForestGameStyle() {
 
       cursor: pointer;
 
+      font-size: 13px;
+
     }
 
+
+    .forest-exit-button:hover {
+
+      background:
+
+        rgba(255, 255, 255, 0.25);
+
+    }
+
+
+    /* ==========================================
+       숲 공간
+    ========================================== */
 
     .forest-room {
 
@@ -877,6 +1438,10 @@ function addForestGameStyle() {
 
     }
 
+
+    /* ==========================================
+       중앙 공간
+    ========================================== */
 
     .forest-room::before {
 
@@ -913,6 +1478,10 @@ function addForestGameStyle() {
     }
 
 
+    /* ==========================================
+       방향 입구 공통
+    ========================================== */
+
     .forest-entrance {
 
       position: absolute;
@@ -933,8 +1502,14 @@ function addForestGameStyle() {
 
       pointer-events: none;
 
+      z-index: 2;
+
     }
 
+
+    /* ==========================================
+       위쪽 반타원
+    ========================================== */
 
     .forest-up {
 
@@ -957,6 +1532,10 @@ function addForestGameStyle() {
     }
 
 
+    /* ==========================================
+       왼쪽 반타원
+    ========================================== */
+
     .forest-left {
 
       left: 2%;
@@ -977,6 +1556,10 @@ function addForestGameStyle() {
 
     }
 
+
+    /* ==========================================
+       오른쪽 반타원
+    ========================================== */
 
     .forest-right {
 
@@ -999,15 +1582,19 @@ function addForestGameStyle() {
     }
 
 
+    /* ==========================================
+       아래쪽 반타원
+    ========================================== */
+
     .forest-down {
 
       left: 50%;
 
-      bottom: 0;
+      bottom: 2%;
 
-      width: 110px;
+      width: 160px;
 
-      height: 55px;
+      height: 80px;
 
       transform:
 
@@ -1015,22 +1602,22 @@ function addForestGameStyle() {
 
       border-radius:
 
-        55px 55px 0 0;
+        0 0 80px 80px;
 
     }
 
+
+    /* ==========================================
+       임시 캐릭터
+    ========================================== */
 
     .forest-player {
 
       position: absolute;
 
-      left: 50%;
+      width: 30px;
 
-      top: 50%;
-
-      width: 28px;
-
-      height: 28px;
+      height: 30px;
 
       transform:
 
@@ -1038,24 +1625,26 @@ function addForestGameStyle() {
 
       border-radius: 50%;
 
-      background: #81c784;
+      background: #ffffff;
 
-      border: 3px solid white;
+      border: 3px solid #111111;
 
       box-sizing: border-box;
 
-      box-shadow:
-
-        0 0 10px
-
-        rgba(0, 0, 0, 0.5);
-
       z-index: 5;
 
-      pointer-events: none;
+      box-shadow:
+
+        0 0 12px
+
+        rgba(255, 255, 255, 0.5);
 
     }
 
+
+    /* ==========================================
+       안내 문구
+    ========================================== */
 
     .forest-message {
 
@@ -1071,18 +1660,44 @@ function addForestGameStyle() {
 
       z-index: 10;
 
-      color:
+      padding: 6px 12px;
 
-        rgba(255, 255, 255, 0.7);
+      border-radius: 8px;
+
+      background:
+
+        rgba(0, 0, 0, 0.45);
+
+      color: #e5e5e5;
 
       font-size: 12px;
 
-      text-align: center;
-
       pointer-events: none;
+
+      white-space: nowrap;
 
     }
 
-`;
-  document.head.appendChild(style);
+  `;
+
+
+  /*
+    여기까지가 CSS 문자열입니다.
+    이 백틱이 반드시 있어야 합니다.
+  */
+
+  document.head.appendChild(
+    style
+  );
+
 }
+
+
+/* ==================================================
+   파일 로드 확인
+================================================== */
+
+console.log(
+  "forest.js 로드 성공"
+);
+
