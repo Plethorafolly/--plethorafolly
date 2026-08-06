@@ -8,13 +8,13 @@ const MONSTER_COLLECTION_DATA = {
 
   wolf: {
     name: "늑대",
-    img: "./wolf.png",
+    img: "./2112.png",
     description: "깊은 숲에서 발견되는 몬스터입니다."
   },
 
   fox: {
     name: "여우",
-    img: "./fox.png",
+    img: "./2112.png",
     description: "숲속을 빠르게 돌아다니는 몬스터입니다."
   }
 
