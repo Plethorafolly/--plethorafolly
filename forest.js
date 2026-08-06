@@ -132,7 +132,9 @@ return room;
 // ==================================================
 // 숲 진입
 // ==================================================
-
+console.log("===== enterForest 실행됨 =====");
+console.log("숲 번호:", forestNumber);
+console.log("보호소 이름:", shelterName);
 function enterForest(
 
 forestNumber,
