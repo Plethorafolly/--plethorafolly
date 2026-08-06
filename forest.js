@@ -7,10 +7,10 @@
    몬스터 & 보물상자 데이터 리스트
 ================================================== */
 const MONSTER_LIST = [
-  { name: "티거", img: "./forest-normal.2112" },
-  { name: "티거", img: "./forest-normal.2112" },
-  { name: "티거", img: "./forest-normal.2112" },
-  { name: "티거", img: "./forest-normal.2112" }
+  { name: "티거", img: "./2112.png" },
+  { name: "티거", img: "./2112.png" },
+  { name: "티거", img: "./2112.png" },
+  { name: "티거", img: "./2112.png" }
 ];
 
 const CHEST_REWARDS = [
