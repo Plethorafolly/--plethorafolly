@@ -284,10 +284,7 @@ function createFirstForestRoom() {
    숲 진입
    ================================================== */
 
-function enterForest(
-  forestNumber,
-  shelterName
-) {
+window.enterForest = function(forestNumber, shelterName) {
 
   console.log(
     "숲 탐험 시작:",
