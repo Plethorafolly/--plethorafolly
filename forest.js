@@ -1,10 +1,3 @@
-const MONSTER_LIST = [
-  {
-    name: "티거",
-    img: "./2112.png"
-  }
-];
-
 const CHEST_REWARDS = [
   "100 골드",
   "체력 회복 포션",
