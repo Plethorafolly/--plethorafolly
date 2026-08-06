@@ -13,34 +13,42 @@ const MONSTER_COLLECTION_DATA = {
     motif: "너구리",
 
     description:
-      "숲에서 발견되는 몬스터입니다."
+      "숲에서 발견되는 몬스터입니다.",
+       
+    realdescription:
+      "보호소로 신고가 들어오는 포유류 중 가장 많은 수를 차지한다. 전염병이 많으므로 만지지 않도록 하자."
 
   },
 
   wolf: {
 
-    name: "늑대",
+    name: "티거",
 
     img: "./2112.png",
 
-    motif: "늑대",
+    motif: "너구리",
 
     description:
-      "깊은 숲에서 발견되는 몬스터입니다."
+      "깊은 숲에서 발견되는 몬스터입니다.",
+
+    realdescription:
+      "보호소로 신고가 들어오는 포유류 중 가장 많은 수를 차지한다. 전염병이 많으므로 만지지 않도록 하자."
 
   },
 
   fox: {
 
-    name: "여우",
+    name: "티거",
 
     img: "./2112.png",
 
-    motif: "여우",
+    motif: "너구리",
 
     description:
-      "숲속을 빠르게 돌아다니는 몬스터입니다."
-
+      "숲속을 빠르게 돌아다니는 몬스터입니다.",
+     
+    realdescription:
+      "보호소로 신고가 들어오는 포유류 중 가장 많은 수를 차지한다. 전염병이 많으므로 만지지 않도록 하자."
   }
 
 };
@@ -422,7 +430,7 @@ window.renderCollection =
             </div>
 
             <div
-              class="collection-monster-description"
+              class="collection-monster-realdescription"
             >
               아직 발견하지 못한 몬스터입니다.
             </div>
