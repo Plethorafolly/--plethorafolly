@@ -1,3 +1,12 @@
+const randomIndex =
+  Math.floor(Math.random() * MONSTER_LIST.length);
+
+const monster =
+  MONSTER_LIST[randomIndex];
+
+console.log(monster.name);
+console.log(monster.species);
+
 const CHEST_REWARDS = [
   "100 골드",
   "체력 회복 포션",
