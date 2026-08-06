@@ -1,65 +1,97 @@
-// ==================================================
-// 몬스터 데이터
-// ==================================================
+```javascript
+/* ==================================================
+   몬스터 데이터
+   ================================================== */
 
 const MONSTER_COLLECTION_DATA = {
 
   racconn: {
+
     name: "티거",
+
     img: "./2112.png",
-    description: "숲에서 발견되는 몬스터입니다."
+
+    motif: "너구리",
+
+    description:
+      "숲에서 발견되는 몬스터입니다."
+
   },
 
   wolf: {
+
     name: "늑대",
+
     img: "./2112.png",
-    description: "깊은 숲에서 발견되는 몬스터입니다."
+
+    motif: "늑대",
+
+    description:
+      "깊은 숲에서 발견되는 몬스터입니다."
+
   },
 
   fox: {
+
     name: "여우",
+
     img: "./2112.png",
-    description: "숲속을 빠르게 돌아다니는 몬스터입니다."
+
+    motif: "여우",
+
+    description:
+      "숲속을 빠르게 돌아다니는 몬스터입니다."
+
   }
 
 };
 
 
-// ==================================================
-// forest.js에서 사용할 몬스터 배열
-// ==================================================
+/* ==================================================
+   숲에서 사용하는 몬스터 목록
+   ================================================== */
 
 const MONSTER_LIST =
-  Object.entries(MONSTER_COLLECTION_DATA).map(
+  Object.entries(
+    MONSTER_COLLECTION_DATA
+  ).map(
     ([species, monster]) => ({
+
       species,
-      ...monster
+
+      name: monster.name,
+
+      img: monster.img,
+
+      motif: monster.motif,
+
+      description:
+        monster.description
+
     })
   );
 
 
-// ==================================================
-// 보물상자 보상
-// ==================================================
+/*
+ * forest.js에서 사용할 수 있도록
+ * window에 연결
+ */
 
-const CHEST_REWARDS = [
+window.MONSTER_LIST =
+  MONSTER_LIST;
 
-  "100 골드",
-  "체력 회복 포션",
-  "마나 회복 포션",
-  "낡은 숲의 열쇠",
-  "희귀한 버섯"
 
-];
-
+/* ==================================================
+   저장 키
+   ================================================== */
 
 const COLLECTION_STORAGE_KEY =
   "forestMonsterCollection";
 
 
-// ==================================================
-// 도감 불러오기
-// ==================================================
+/* ==================================================
+   도감 불러오기
+   ================================================== */
 
 function loadMonsterCollection() {
 
@@ -73,7 +105,10 @@ function loadMonsterCollection() {
       );
 
     if (saved) {
-      savedData = JSON.parse(saved);
+
+      savedData =
+        JSON.parse(saved);
+
     }
 
   } catch (error) {
@@ -82,7 +117,6 @@ function loadMonsterCollection() {
       "도감 데이터를 불러오지 못했습니다.",
       error
     );
-
   }
 
 
@@ -102,7 +136,6 @@ function loadMonsterCollection() {
 
 
   return collection;
-
 }
 
 
@@ -110,15 +143,17 @@ window.monsterCollection =
   loadMonsterCollection();
 
 
-// ==================================================
-// 몬스터 도감 해금
-// ==================================================
+/* ==================================================
+   몬스터 해금
+   ================================================== */
 
 window.unlockMonster =
   function(species) {
 
     if (
-      !MONSTER_COLLECTION_DATA[species]
+      !MONSTER_COLLECTION_DATA[
+        species
+      ]
     ) {
 
       console.warn(
@@ -127,21 +162,24 @@ window.unlockMonster =
       );
 
       return;
-
     }
 
 
-    window.monsterCollection[species] =
-      true;
+    window.monsterCollection[
+      species
+    ] = true;
 
 
     try {
 
       localStorage.setItem(
+
         COLLECTION_STORAGE_KEY,
+
         JSON.stringify(
           window.monsterCollection
         )
+
       );
 
     } catch (error) {
@@ -150,15 +188,19 @@ window.unlockMonster =
         "도감 데이터를 저장하지 못했습니다.",
         error
       );
-
     }
 
+
+    console.log(
+      "도감 해금:",
+      species
+    );
   };
 
 
-// ==================================================
-// 도감 열기
-// ==================================================
+/* ==================================================
+   도감 열기
+   ================================================== */
 
 window.openCollection =
   function() {
@@ -173,7 +215,9 @@ window.openCollection =
 
 
     const screen =
-      document.createElement("div");
+      document.createElement(
+        "div"
+      );
 
     screen.id =
       "collection-screen";
@@ -183,9 +227,13 @@ window.openCollection =
 
       <div class="collection-window">
 
-        <div class="collection-header">
+        <div
+          class="collection-header"
+        >
 
-          <h2>몬스터 도감</h2>
+          <h2>
+            몬스터 도감
+          </h2>
 
           <button
             type="button"
@@ -197,6 +245,7 @@ window.openCollection =
 
         </div>
 
+
         <div
           id="collection-list"
           class="collection-list"
@@ -207,7 +256,10 @@ window.openCollection =
     `;
 
 
-    document.body.appendChild(screen);
+    document.body.appendChild(
+      screen
+    );
+
 
     addCollectionStyle();
 
@@ -216,9 +268,9 @@ window.openCollection =
   };
 
 
-// ==================================================
-// 도감 닫기
-// ==================================================
+/* ==================================================
+   도감 닫기
+   ================================================== */
 
 window.closeCollection =
   function() {
@@ -229,15 +281,17 @@ window.closeCollection =
       );
 
     if (screen) {
+
       screen.remove();
+
     }
 
   };
 
 
-// ==================================================
-// 도감 표시
-// ==================================================
+/* ==================================================
+   도감 렌더링
+   ================================================== */
 
 window.renderCollection =
   function() {
@@ -261,20 +315,28 @@ window.renderCollection =
       species => {
 
         const monster =
-          MONSTER_COLLECTION_DATA[species];
+          MONSTER_COLLECTION_DATA[
+            species
+          ];
 
 
         const unlocked =
-          window.monsterCollection[species] === true;
+          window.monsterCollection[
+            species
+          ] === true;
 
 
         const card =
-          document.createElement("div");
+          document.createElement(
+            "div"
+          );
 
 
         card.className =
           unlocked
+
             ? "collection-card unlocked"
+
             : "collection-card locked";
 
 
@@ -284,41 +346,85 @@ window.renderCollection =
 
             <img
               src="${monster.img}"
-              alt="${monster.name}"
+              alt="${escapeHtml(
+                monster.name
+              )}"
               class="collection-monster-image"
             >
 
-            <div class="collection-monster-name">
-              ${monster.name}
+            <div
+              class="collection-monster-name"
+            >
+              ${escapeHtml(
+                monster.name
+              )}
             </div>
 
-            <div class="collection-monster-species">
-              ${species}
+            <div
+              class="collection-monster-species"
+            >
+              ${escapeHtml(
+                species
+              )}
             </div>
 
-            <div class="collection-monster-description">
-              ${monster.description}
+            <div
+              class="collection-monster-description"
+            >
+              ${escapeHtml(
+                monster.description
+              )}
+            </div>
+
+            <div
+              class="collection-click-guide"
+            >
+              클릭하여 자세히 보기
             </div>
 
           `;
+
+
+          /*
+           * 획득한 몬스터만 클릭 가능
+           */
+
+          card.addEventListener(
+            "click",
+            function() {
+
+              showMonsterDetail(
+                monster
+              );
+
+            }
+          );
 
         } else {
 
           card.innerHTML = `
 
-            <div class="collection-question">
+            <div
+              class="collection-question"
+            >
               ?
             </div>
 
-            <div class="collection-monster-name">
+            <div
+              class="collection-monster-name"
+            >
               ???
             </div>
 
-            <div class="collection-monster-species">
+            <div
+              class="collection-monster-species"
+            >
               미발견
             </div>
 
-            <div class="collection-monster-description">
+            <div
+              class="collection-monster-description"
+            >
               아직 발견하지 못한 몬스터입니다.
             </div>
 
@@ -327,7 +433,9 @@ window.renderCollection =
         }
 
 
-        list.appendChild(card);
+        list.appendChild(
+          card
+        );
 
       }
     );
@@ -335,9 +443,111 @@ window.renderCollection =
   };
 
 
-// ==================================================
-// 도감 CSS
-// ==================================================
+/* ==================================================
+   몬스터 상세 정보
+   ================================================== */
+
+function showMonsterDetail(
+  monster
+) {
+
+  const screen =
+    document.createElement(
+      "div"
+    );
+
+  screen.className =
+    "monster-detail-screen";
+
+
+  screen.innerHTML = `
+
+    <div
+      class="monster-detail-window"
+      onclick="event.stopPropagation()"
+    >
+
+      <button
+        type="button"
+        class="monster-detail-close"
+      >
+        ×
+      </button>
+
+
+      <img
+        src="${monster.img}"
+        alt="${escapeHtml(
+          monster.name
+        )}"
+        class="monster-detail-image"
+      >
+
+
+      <h2>
+        ${escapeHtml(
+          monster.name
+        )}
+      </h2>
+
+
+      <div
+        class="monster-detail-motif"
+      >
+        모티브:
+        ${escapeHtml(
+          monster.motif
+        )}
+      </div>
+
+
+      <p
+        class="monster-detail-description"
+      >
+        ${escapeHtml(
+          monster.description
+        )}
+      </p>
+
+    </div>
+
+  `;
+
+
+  document.body.appendChild(
+    screen
+  );
+
+
+  screen.addEventListener(
+    "click",
+    function() {
+
+      screen.remove();
+
+    }
+  );
+
+
+  screen
+    .querySelector(
+      ".monster-detail-close"
+    )
+    .addEventListener(
+      "click",
+      function() {
+
+        screen.remove();
+
+      }
+    );
+
+}
+
+
+/* ==================================================
+   도감 CSS
+   ================================================== */
 
 function addCollectionStyle() {
 
@@ -351,7 +561,9 @@ function addCollectionStyle() {
 
 
   const style =
-    document.createElement("style");
+    document.createElement(
+      "style"
+    );
 
 
   style.id =
@@ -363,16 +575,22 @@ function addCollectionStyle() {
     #collection-screen {
 
       position: fixed;
+
       inset: 0;
+
       z-index: 20000;
 
       display: flex;
+
       justify-content: center;
+
       align-items: center;
 
-      background: rgba(0, 0, 0, 0.75);
+      background:
+        rgba(0, 0, 0, 0.75);
 
       font-family: sans-serif;
+
       color: white;
 
     }
@@ -382,7 +600,9 @@ function addCollectionStyle() {
 
       position: relative;
 
-      width: min(900px, 90vw);
+      width:
+        min(900px, 90vw);
+
       max-height: 85vh;
 
       overflow: hidden;
@@ -393,12 +613,15 @@ function addCollectionStyle() {
 
       border-radius: 16px;
 
-      background: #202b1d;
+      background:
+        #202b1d;
 
-      border: 2px solid #81c784;
+      border:
+        2px solid #81c784;
 
       box-shadow:
-        0 0 30px rgba(0, 0, 0, 0.7);
+        0 0 30px
+        rgba(0, 0, 0, 0.7);
 
     }
 
@@ -406,7 +629,9 @@ function addCollectionStyle() {
     .collection-header {
 
       display: flex;
+
       align-items: center;
+
       justify-content: space-between;
 
       margin-bottom: 20px;
@@ -417,6 +642,7 @@ function addCollectionStyle() {
     .collection-header h2 {
 
       margin: 0;
+
       font-size: 24px;
 
     }
@@ -425,16 +651,20 @@ function addCollectionStyle() {
     .collection-close {
 
       width: 36px;
+
       height: 36px;
 
       border: none;
+
       border-radius: 50%;
 
-      background: rgba(255, 255, 255, 0.12);
+      background:
+        rgba(255, 255, 255, 0.12);
 
       color: white;
 
       font-size: 25px;
+
       line-height: 1;
 
       cursor: pointer;
@@ -496,11 +726,43 @@ function addCollectionStyle() {
     .collection-card.unlocked {
 
       background:
-        rgba(129, 199, 132, 0.12);
+        rgba(
+          129,
+          199,
+          132,
+          0.12
+        );
 
       border:
         1px solid
-        rgba(129, 199, 132, 0.5);
+        rgba(
+          129,
+          199,
+          132,
+          0.5
+        );
+
+      cursor: pointer;
+
+      transition:
+        transform 0.2s,
+        background 0.2s;
+
+    }
+
+
+    .collection-card.unlocked:hover {
+
+      transform:
+        translateY(-4px);
+
+      background:
+        rgba(
+          129,
+          199,
+          132,
+          0.2
+        );
 
     }
 
@@ -517,9 +779,11 @@ function addCollectionStyle() {
       display: block;
 
       width: 140px;
+
       height: 140px;
 
-      margin: 0 auto 10px auto;
+      margin:
+        0 auto 10px auto;
 
       object-fit: contain;
 
@@ -535,14 +799,18 @@ function addCollectionStyle() {
       display: flex;
 
       justify-content: center;
+
       align-items: center;
 
       width: 140px;
+
       height: 140px;
 
-      margin: 0 auto 10px auto;
+      margin:
+        0 auto 10px auto;
 
       font-size: 80px;
+
       font-weight: bold;
 
       color: #777;
@@ -558,6 +826,7 @@ function addCollectionStyle() {
     .collection-monster-name {
 
       font-size: 18px;
+
       font-weight: bold;
 
       margin-bottom: 5px;
@@ -586,12 +855,167 @@ function addCollectionStyle() {
 
     }
 
+
+    .collection-click-guide {
+
+      margin-top: 10px;
+
+      font-size: 11px;
+
+      color: #a5d6a7;
+
+    }
+
+
+    /* 몬스터 상세 창 */
+
+    .monster-detail-screen {
+
+      position: fixed;
+
+      inset: 0;
+
+      z-index: 30000;
+
+      display: flex;
+
+      align-items: center;
+
+      justify-content: center;
+
+      background:
+        rgba(0, 0, 0, 0.78);
+
+      font-family: sans-serif;
+
+    }
+
+
+    .monster-detail-window {
+
+      position: relative;
+
+      width:
+        min(420px, 85vw);
+
+      padding: 28px;
+
+      box-sizing: border-box;
+
+      border-radius: 18px;
+
+      background:
+        #202b1d;
+
+      border:
+        2px solid #81c784;
+
+      box-shadow:
+        0 0 35px
+        rgba(0, 0, 0, 0.7);
+
+      text-align: center;
+
+      color: white;
+
+    }
+
+
+    .monster-detail-close {
+
+      position: absolute;
+
+      top: 12px;
+
+      right: 12px;
+
+      width: 34px;
+
+      height: 34px;
+
+      border: none;
+
+      border-radius: 50%;
+
+      background:
+        rgba(255, 255, 255, 0.12);
+
+      color: white;
+
+      font-size: 24px;
+
+      line-height: 1;
+
+      cursor: pointer;
+
+    }
+
+
+    .monster-detail-close:hover {
+
+      background:
+        rgba(255, 255, 255, 0.25);
+
+    }
+
+
+    .monster-detail-image {
+
+      width: 220px;
+
+      height: 220px;
+
+      object-fit: contain;
+
+      margin-bottom: 10px;
+
+    }
+
+
+    .monster-detail-window h2 {
+
+      margin:
+        5px 0 8px 0;
+
+      font-size: 24px;
+
+    }
+
+
+    .monster-detail-motif {
+
+      margin-bottom: 14px;
+
+      font-size: 14px;
+
+      color: #a5d6a7;
+
+    }
+
+
+    .monster-detail-description {
+
+      margin: 0;
+
+      line-height: 1.7;
+
+      font-size: 14px;
+
+      color: #d7ddd5;
+
+    }
+
   `;
 
 
-  document.head.appendChild(style);
+  document.head.appendChild(
+    style
+  );
 
 }
 
 
-console.log("collection.js 로드 성공");
+console.log(
+  "collection.js 로드 성공"
+);
+```
