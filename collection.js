@@ -20,35 +20,20 @@ const MONSTER_COLLECTION_DATA = {
 
   },
 
-  wolf: {
+  zara: {
 
-    name: "티거",
+    name: "현무",
 
-    img: "./2112.png",
+    img: "./2113.png",
 
-    motif: "너구리",
-
-    description:
-      "깊은 숲에서 발견되는 몬스터입니다.",
-
-    realdescription:
-      "보호소로 신고가 들어오는 포유류 중 가장 많은 수를 차지한다. 전염병이 많으므로 만지지 않도록 하자."
-
-  },
-
-  fox: {
-
-    name: "티거",
-
-    img: "./2112.png",
-
-    motif: "너구리",
+    motif: "자라",
 
     description:
-      "숲속을 빠르게 돌아다니는 몬스터입니다.",
-     
+      "얕은 물에서 발견되는 몬스터입니다.",
+
     realdescription:
-      "보호소로 신고가 들어오는 포유류 중 가장 많은 수를 차지한다. 전염병이 많으므로 만지지 않도록 하자."
+      "바닥이 모래로 되어있는 민물을 좋아한다.."
+
   }
 
 };
