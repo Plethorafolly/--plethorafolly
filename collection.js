@@ -1,3 +1,7 @@
+// ==================================================
+// 몬스터 데이터
+// ==================================================
+
 const MONSTER_COLLECTION_DATA = {
 
   racconn: {
@@ -21,9 +25,41 @@ const MONSTER_COLLECTION_DATA = {
 };
 
 
+// ==================================================
+// forest.js에서 사용할 몬스터 배열
+// ==================================================
+
+const MONSTER_LIST =
+  Object.entries(MONSTER_COLLECTION_DATA).map(
+    ([species, monster]) => ({
+      species,
+      ...monster
+    })
+  );
+
+
+// ==================================================
+// 보물상자 보상
+// ==================================================
+
+const CHEST_REWARDS = [
+
+  "100 골드",
+  "체력 회복 포션",
+  "마나 회복 포션",
+  "낡은 숲의 열쇠",
+  "희귀한 버섯"
+
+];
+
+
 const COLLECTION_STORAGE_KEY =
   "forestMonsterCollection";
 
+
+// ==================================================
+// 도감 불러오기
+// ==================================================
 
 function loadMonsterCollection() {
 
@@ -46,28 +82,37 @@ function loadMonsterCollection() {
       "도감 데이터를 불러오지 못했습니다.",
       error
     );
+
   }
 
 
   const collection = {};
 
+
   Object.keys(
     MONSTER_COLLECTION_DATA
-  ).forEach(species => {
+  ).forEach(
+    species => {
 
-    collection[species] =
-      savedData[species] === true;
+      collection[species] =
+        savedData[species] === true;
 
-  });
+    }
+  );
 
 
   return collection;
+
 }
 
 
 window.monsterCollection =
   loadMonsterCollection();
 
+
+// ==================================================
+// 몬스터 도감 해금
+// ==================================================
 
 window.unlockMonster =
   function(species) {
@@ -82,6 +127,7 @@ window.unlockMonster =
       );
 
       return;
+
     }
 
 
@@ -104,15 +150,15 @@ window.unlockMonster =
         "도감 데이터를 저장하지 못했습니다.",
         error
       );
+
     }
 
-
-    console.log(
-      "도감 해금:",
-      species
-    );
   };
 
+
+// ==================================================
+// 도감 열기
+// ==================================================
 
 window.openCollection =
   function() {
@@ -151,7 +197,6 @@ window.openCollection =
 
         </div>
 
-
         <div
           id="collection-list"
           class="collection-list"
@@ -164,12 +209,16 @@ window.openCollection =
 
     document.body.appendChild(screen);
 
-
     addCollectionStyle();
 
     renderCollection();
+
   };
 
+
+// ==================================================
+// 도감 닫기
+// ==================================================
 
 window.closeCollection =
   function() {
@@ -182,8 +231,13 @@ window.closeCollection =
     if (screen) {
       screen.remove();
     }
+
   };
 
+
+// ==================================================
+// 도감 표시
+// ==================================================
 
 window.renderCollection =
   function() {
@@ -203,80 +257,87 @@ window.renderCollection =
 
     Object.keys(
       MONSTER_COLLECTION_DATA
-    ).forEach(species => {
+    ).forEach(
+      species => {
 
-      const monster =
-        MONSTER_COLLECTION_DATA[species];
-
-
-      const unlocked =
-        window.monsterCollection[species] === true;
+        const monster =
+          MONSTER_COLLECTION_DATA[species];
 
 
-      const card =
-        document.createElement("div");
+        const unlocked =
+          window.monsterCollection[species] === true;
 
 
-      card.className =
-        unlocked
-          ? "collection-card unlocked"
-          : "collection-card locked";
+        const card =
+          document.createElement("div");
 
 
-      if (unlocked) {
+        card.className =
+          unlocked
+            ? "collection-card unlocked"
+            : "collection-card locked";
 
-        card.innerHTML = `
 
-          <img
-            src="${monster.img}"
-            alt="${monster.name}"
-            class="collection-monster-image"
-          >
+        if (unlocked) {
 
-          <div class="collection-monster-name">
-            ${monster.name}
-          </div>
+          card.innerHTML = `
 
-          <div class="collection-monster-species">
-            ${species}
-          </div>
+            <img
+              src="${monster.img}"
+              alt="${monster.name}"
+              class="collection-monster-image"
+            >
 
-          <div class="collection-monster-description">
-            ${monster.description}
-          </div>
+            <div class="collection-monster-name">
+              ${monster.name}
+            </div>
 
-        `;
+            <div class="collection-monster-species">
+              ${species}
+            </div>
 
-      } else {
+            <div class="collection-monster-description">
+              ${monster.description}
+            </div>
 
-        card.innerHTML = `
+          `;
 
-          <div class="collection-question">
-            ?
-          </div>
+        } else {
 
-          <div class="collection-monster-name">
-            ???
-          </div>
+          card.innerHTML = `
 
-          <div class="collection-monster-species">
-            미발견
-          </div>
+            <div class="collection-question">
+              ?
+            </div>
 
-          <div class="collection-monster-description">
-            아직 발견하지 못한 몬스터입니다.
-          </div>
+            <div class="collection-monster-name">
+              ???
+            </div>
 
-        `;
+            <div class="collection-monster-species">
+              미발견
+            </div>
+
+            <div class="collection-monster-description">
+              아직 발견하지 못한 몬스터입니다.
+            </div>
+
+          `;
+
+        }
+
+
+        list.appendChild(card);
+
       }
-
-
-      list.appendChild(card);
-
-    });
+    );
 
   };
 
+
+// ==================================================
+// 도감 CSS
+// ==================================================
 
 function addCollectionStyle() {
 
@@ -302,22 +363,16 @@ function addCollectionStyle() {
     #collection-screen {
 
       position: fixed;
-
       inset: 0;
-
       z-index: 20000;
 
       display: flex;
-
       justify-content: center;
-
       align-items: center;
 
-      background:
-        rgba(0, 0, 0, 0.75);
+      background: rgba(0, 0, 0, 0.75);
 
       font-family: sans-serif;
-
       color: white;
 
     }
@@ -328,7 +383,6 @@ function addCollectionStyle() {
       position: relative;
 
       width: min(900px, 90vw);
-
       max-height: 85vh;
 
       overflow: hidden;
@@ -339,15 +393,12 @@ function addCollectionStyle() {
 
       border-radius: 16px;
 
-      background:
-        #202b1d;
+      background: #202b1d;
 
-      border:
-        2px solid #81c784;
+      border: 2px solid #81c784;
 
       box-shadow:
-        0 0 30px
-        rgba(0, 0, 0, 0.7);
+        0 0 30px rgba(0, 0, 0, 0.7);
 
     }
 
@@ -355,9 +406,7 @@ function addCollectionStyle() {
     .collection-header {
 
       display: flex;
-
       align-items: center;
-
       justify-content: space-between;
 
       margin-bottom: 20px;
@@ -368,7 +417,6 @@ function addCollectionStyle() {
     .collection-header h2 {
 
       margin: 0;
-
       font-size: 24px;
 
     }
@@ -377,20 +425,16 @@ function addCollectionStyle() {
     .collection-close {
 
       width: 36px;
-
       height: 36px;
 
       border: none;
-
       border-radius: 50%;
 
-      background:
-        rgba(255, 255, 255, 0.12);
+      background: rgba(255, 255, 255, 0.12);
 
       color: white;
 
       font-size: 25px;
-
       line-height: 1;
 
       cursor: pointer;
@@ -473,7 +517,6 @@ function addCollectionStyle() {
       display: block;
 
       width: 140px;
-
       height: 140px;
 
       margin: 0 auto 10px auto;
@@ -492,17 +535,14 @@ function addCollectionStyle() {
       display: flex;
 
       justify-content: center;
-
       align-items: center;
 
       width: 140px;
-
       height: 140px;
 
       margin: 0 auto 10px auto;
 
       font-size: 80px;
-
       font-weight: bold;
 
       color: #777;
@@ -518,7 +558,6 @@ function addCollectionStyle() {
     .collection-monster-name {
 
       font-size: 18px;
-
       font-weight: bold;
 
       margin-bottom: 5px;
@@ -551,9 +590,8 @@ function addCollectionStyle() {
 
 
   document.head.appendChild(style);
+
 }
 
 
-console.log(
-  "collection.js 로드 성공"
-);
+console.log("collection.js 로드 성공");
