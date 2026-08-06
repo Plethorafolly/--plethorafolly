@@ -1083,6 +1083,6 @@ function addForestGameStyle() {
 
     }
 
-
+`;
   document.head.appendChild(style);
 }
