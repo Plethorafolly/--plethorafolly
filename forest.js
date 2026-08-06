@@ -6,25 +6,18 @@ forest.js
 // ==================================================
 // 숲 게임 전역 변수
 // ==================================================
+
 console.log("========== forest.js 로드 성공 ==========");
+
 let forestGame = {
-
 depth: 0,
-
 currentRoom: null,
-
 screen: null,
-
 player: null,
-
 playerX: 50,
-
 playerY: 50,
-
 keys: {},
-
 animationId: null
-
 };
 
 // ==================================================
@@ -34,20 +27,14 @@ animationId: null
 function createForestRoom(parentDirection) {
 
 const room = {
-
-```
 parentDirection: parentDirection,
 
+```
 exits: {
-
   left: false,
-
   right: false,
-
   up: false,
-
   down: false
-
 }
 ```
 
@@ -58,27 +45,13 @@ exits: {
 // ------------------------------------------
 
 if (parentDirection === "left") {
-
-```
 room.exits.right = true;
-```
-
 }
-
 else if (parentDirection === "right") {
-
-```
 room.exits.left = true;
-```
-
 }
-
 else if (parentDirection === "up") {
-
-```
 room.exits.down = true;
-```
-
 }
 
 // ------------------------------------------
@@ -93,11 +66,7 @@ if (
 parentDirection !== "left" &&
 Math.random() < deeperForestProbability
 ) {
-
-```
 room.exits.left = true;
-```
-
 }
 
 // 오른쪽
@@ -106,11 +75,7 @@ if (
 parentDirection !== "right" &&
 Math.random() < deeperForestProbability
 ) {
-
-```
 room.exits.right = true;
-```
-
 }
 
 // 위쪽
@@ -118,15 +83,10 @@ room.exits.right = true;
 if (
 Math.random() < deeperForestProbability
 ) {
-
-```
 room.exits.up = true;
-```
-
 }
 
 return room;
-
 }
 
 // ==================================================
@@ -134,43 +94,28 @@ return room;
 // ==================================================
 
 function enterForest(
-
 forestNumber,
-
 shelterName
-
 ) {
 
 console.log(
-
-```
 "숲 탐험 시작:",
-
 forestNumber,
-
 shelterName
-```
-
 );
 
+// ------------------------------------------
 // 기존 게임 제거
+// ------------------------------------------
 
 if (forestGame.screen) {
-
-```
 forestGame.screen.remove();
-```
-
 }
 
 if (forestGame.animationId) {
-
-```
 cancelAnimationFrame(
-  forestGame.animationId
+forestGame.animationId
 );
-```
-
 }
 
 // ------------------------------------------
@@ -189,15 +134,10 @@ forestGame.currentRoom = {
 parentDirection: null,
 
 exits: {
-
   left: true,
-
   right: true,
-
   up: true,
-
   down: true
-
 }
 ```
 
@@ -217,7 +157,6 @@ screen.innerHTML = `
 
 ```
 <div class="forest-game">
-
 
   <!-- 상단 정보 -->
 
@@ -253,7 +192,6 @@ screen.innerHTML = `
     class="forest-room"
   >
 
-
     <!-- 방향 입구 -->
 
     <div
@@ -287,18 +225,14 @@ screen.innerHTML = `
       class="forest-player"
     ></div>
 
-
   </div>
 
 
   <!-- 안내 -->
 
   <div class="forest-message">
-
     방향키로 이동하십시오.
-
   </div>
-
 
 </div>
 ```
@@ -309,26 +243,35 @@ document.body.appendChild(
 screen
 );
 
-forestGame.screen = screen;
+forestGame.screen =
+screen;
 
 forestGame.player =
 document.getElementById(
 "forest-player"
 );
 
+// ------------------------------------------
 // CSS 추가
+// ------------------------------------------
 
 addForestGameStyle();
 
+// ------------------------------------------
 // 키보드 이벤트 시작
+// ------------------------------------------
 
 startForestKeyboard();
 
+// ------------------------------------------
 // 첫 공간 표시
+// ------------------------------------------
 
 renderForestRoom();
 
+// ------------------------------------------
 // 게임 루프 시작
+// ------------------------------------------
 
 forestGameLoop();
 
@@ -344,11 +287,7 @@ const room =
 forestGame.currentRoom;
 
 if (!room) {
-
-```
 return;
-```
-
 }
 
 const up =
@@ -414,23 +353,13 @@ updatePlayerPosition();
 function startForestKeyboard() {
 
 document.addEventListener(
-
-```
 "keydown",
-
 forestKeyDown
-```
-
 );
 
 document.addEventListener(
-
-```
 "keyup",
-
 forestKeyUp
-```
-
 );
 
 }
@@ -442,23 +371,13 @@ forestKeyUp
 function stopForestKeyboard() {
 
 document.removeEventListener(
-
-```
 "keydown",
-
 forestKeyDown
-```
-
 );
 
 document.removeEventListener(
-
-```
 "keyup",
-
 forestKeyUp
-```
-
 );
 
 forestGame.keys = {};
@@ -472,30 +391,18 @@ forestGame.keys = {};
 function forestKeyDown(event) {
 
 if (!forestGame.screen) {
-
-```
 return;
-```
-
 }
 
 if (
-
-```
 event.key === "ArrowUp" ||
-
 event.key === "ArrowDown" ||
-
 event.key === "ArrowLeft" ||
-
 event.key === "ArrowRight"
-```
-
 ) {
 
 ```
 event.preventDefault();
-
 
 forestGame.keys[
   event.key
@@ -513,17 +420,10 @@ forestGame.keys[
 function forestKeyUp(event) {
 
 if (
-
-```
 event.key === "ArrowUp" ||
-
 event.key === "ArrowDown" ||
-
 event.key === "ArrowLeft" ||
-
 event.key === "ArrowRight"
-```
-
 ) {
 
 ```
@@ -543,11 +443,7 @@ forestGame.keys[
 function forestGameLoop() {
 
 if (!forestGame.screen) {
-
-```
 return;
-```
-
 }
 
 movePlayer();
@@ -636,11 +532,7 @@ moved = true;
 }
 
 if (!moved) {
-
-```
 return;
-```
-
 }
 
 // ------------------------------------------
@@ -658,11 +550,7 @@ checkForestBoundary();
 function updatePlayerPosition() {
 
 if (!forestGame.player) {
-
-```
 return;
-```
-
 }
 
 forestGame.player.style.left =
@@ -826,7 +714,6 @@ forestGame.depth === 0
 ```
 exitForestGame();
 
-
 return;
 ```
 
@@ -854,15 +741,10 @@ forestGame.currentRoom = {
 parentDirection: null,
 
 exits: {
-
   left: false,
-
   right: false,
-
   up: false,
-
   down: false
-
 }
 ```
 
@@ -1035,7 +917,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    숲
    ========================================== */
@@ -1059,7 +940,6 @@ style.innerHTML = `
     );
 
 }
-
 
 
 /* ==========================================
@@ -1117,7 +997,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    나가기
    ========================================== */
@@ -1140,7 +1019,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    숲 공간
    ========================================== */
@@ -1160,7 +1038,6 @@ style.innerHTML = `
   overflow: hidden;
 
 }
-
 
 
 /* ==========================================
@@ -1198,7 +1075,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    방향 입구
    ========================================== */
@@ -1220,7 +1096,6 @@ style.innerHTML = `
   pointer-events: none;
 
 }
-
 
 
 /* ==========================================
@@ -1246,7 +1121,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    왼쪽
    ========================================== */
@@ -1268,7 +1142,6 @@ style.innerHTML = `
     0 80px 80px 0;
 
 }
-
 
 
 /* ==========================================
@@ -1294,7 +1167,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    아래
    ========================================== */
@@ -1316,7 +1188,6 @@ style.innerHTML = `
     55px 55px 0 0;
 
 }
-
 
 
 /* ==========================================
@@ -1357,7 +1228,6 @@ style.innerHTML = `
 }
 
 
-
 /* ==========================================
    안내 문구
    ========================================== */
@@ -1392,6 +1262,9 @@ style.innerHTML = `
 document.head.appendChild(
 style
 );
+
+}
+
 
 }
 
