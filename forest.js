@@ -1605,26 +1605,16 @@ function addForestGameStyle() {
     }
 
 
-    .forest-room {
-
+   .forest-room {
       position: absolute;
 
-      left: 0;
-
-      right: 0;
-
-      top: 55px;
-
-      bottom: 45px;
+      inset: 0;
 
       overflow: hidden;
-
+ 
       background-size: cover;
-
       background-position: center;
-
       background-repeat: no-repeat;
-
     }
 
 
