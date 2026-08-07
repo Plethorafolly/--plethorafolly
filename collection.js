@@ -20,7 +20,7 @@ const MONSTER_COLLECTION_DATA = {
 
   },
 
-  wolf: {
+  softshellturtle : {
 
     name: "현무",
 
@@ -494,10 +494,10 @@ function showMonsterDetail(
 
 
       <p
-        class="monster-detail-description"
+        class="monster-detail-realdescription"
       >
         ${escapeHtml(
-          monster.description
+          monster.realdescription
         )}
       </p>
 
