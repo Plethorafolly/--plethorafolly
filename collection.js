@@ -1008,5 +1008,5 @@ function addCollectionStyle() {
 
 
 console.log(
-  "collection.js 로드 성공"
+  "collection.js 로드 성공!"
 );
