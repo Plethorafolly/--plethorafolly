@@ -20,7 +20,7 @@ const MONSTER_COLLECTION_DATA = {
 
   },
 
-  zara: {
+  wolf: {
 
     name: "현무",
 
@@ -32,7 +32,7 @@ const MONSTER_COLLECTION_DATA = {
       "얕은 물에서 발견되는 몬스터입니다.",
 
     realdescription:
-      "바닥이 모래로 되어있는 민물을 좋아한다.."
+      "바닥이 모래로 되어있는 민물을 좋아한다."
 
   }
 
